@@ -1,17 +1,34 @@
 # SafeStep — Gemini CLI Context
 
-You are working on **SafeStep**, a women's safety navigation web app for Lisbon. The team driving you is **non-technical** (NOVA SBE students who built the original Lovable demo). They will describe features in plain English. You implement them.
+You are working on **SafeStep**, a women's safety navigation web app for Lisbon.
+
+## Who you are talking to (read this first)
+
+The people driving you are **NOT software engineers.** They are five NOVA SBE students (Carolina, Valeria, Alberto, Lilly, Sarah) who built the original SafeStep concept on Lovable. They have **no formal coding background** and are extending the app via you, this CLI.
+
+This shapes everything about how you work:
+
+- **Default to plain language.** Don't say *"I'll add a `useEffect` to debounce the input"* — say *"I'll make it wait until you stop typing before searching."* If you must use a technical term, briefly say what it does.
+- **Explain *what changed*, not *how the code changed*.** After each edit, summarize in user-visible terms: *"Now the Open Now filter also hides places that close in less than 30 minutes"*, not *"Added an `expiresWithin` predicate to the filter array."*
+- **Never ask them to make architectural decisions.** Don't ask *"should this be a hook or a context?"* — pick the right answer (a hook, almost always) and proceed. They'll trust you on shape; you should trust them on intent.
+- **Default to safe choices.** When you have to pick between "easier and good enough" and "more correct but more code," pick easier. They want fast iteration, not engineering elegance.
+- **Ask one question at a time, in plain English, only when you genuinely need them to choose.** Examples of *good* questions: *"Should the new Settings page replace the Mesh tab, or add a 5th tab?"* / *"Do you want this for everyone, or only logged-in users?"* (when auth exists). *Bad* question: *"What persistence strategy should we use?"*
+- **Surface trade-offs only when there's real risk.** If you're about to do something irreversible (drop a table, change a published API) or expensive (add a paid service), pause and explain in 2–3 sentences. Otherwise just do it.
+- **Tell them when their request reveals a deeper issue.** If they ask "make the slider work" and you discover the sliders are cosmetic and don't actually change routing — tell them. Don't fake it. *"The sliders right now don't do anything — they're decorative. To make them actually re-rank routes, I need to do X. Want me to?"*
+
+The technical lead is **Diogo** (`diogo.seabra.diogo@gmail.com`). When something is genuinely beyond the daily flow — auth, paid services, big refactors — say *"this is bigger than the usual change; let me flag it for Diogo first"* and stop.
 
 ---
 
 ## Hard rules (never violate)
 
-1. **Use the `context7` MCP server for library/framework docs.** Whenever you touch code that uses React, Vite, Tailwind, MapLibre, react-map-gl, Supabase, react-router, lucide-react, or any other library — call `context7.resolve-library-id` then `context7.query-docs` first. Your training data may be out of date; context7 returns current docs. **Do not skip this even for "obvious" library APIs.**
+1. **Use the `context7` MCP server for library/framework docs.** Whenever you touch code that uses React, Vite, Tailwind, MapLibre, react-map-gl, Supabase, react-router, lucide-react, or any other library — call `context7.resolve-library-id` then `context7.query-docs` first. Your training data may be out of date; context7 returns current docs. **Do not skip this even for "obvious" library APIs.** It's already configured in `.gemini/settings.json` — no setup needed.
 2. **Never edit `src/lib/database.types.ts` by hand.** It's regenerated from the live Supabase schema. After any DB change, run `pnpm db:types`.
 3. **Never commit secrets.** `.env*` files are gitignored. The Supabase anon key in `.env.local` is fine to expose (it's public by design with RLS), but DB passwords, service role keys, and anything in `.env.supabase.local` must stay local.
 4. **Never `git push --force` to `main`.** Always work on a feature branch.
-5. **Run `pnpm build` before claiming a feature is done.** It type-checks the whole project. If it errors, the deploy will fail.
+5. **Run `pnpm build` before claiming a feature is done.** It type-checks the whole project. If it errors, the deploy will fail. The team's `safe-step ship` wrapper does this automatically — but if you're testing manually, run it.
 6. **Confirm with the user before destructive Supabase changes** (dropping tables, deleting columns, removing RLS policies). Migrations that *add* are fine to run unattended.
+7. **Never tell them to "run a migration" or "regenerate types" without doing it yourself first.** If you change the schema, you also run `pnpm supabase db push` and `pnpm db:types`. They should never have to type those commands.
 
 ---
 

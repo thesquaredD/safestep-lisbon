@@ -6,6 +6,30 @@ This is your one-page guide. You don't need to know git, Vercel, or Supabase. Yo
 
 ---
 
+## One-time setup (≈5 minutes, do this once per laptop)
+
+1. **Install Gemini CLI** (the AI that edits the code for you):
+   ```
+   npm install -g @google/gemini-cli
+   ```
+   On the first run it'll ask you to sign in with a Google account. Pick a personal one.
+2. **Clone the project to your laptop:**
+   ```
+   git clone git@github.com:thesquaredD/safestep-lisbon.git
+   cd safestep-lisbon
+   pnpm install
+   ```
+   (If you don't have `pnpm`: `npm install -g pnpm` first.)
+3. **Make `safe-step` runnable from anywhere:**
+   ```
+   sudo ln -s "$PWD/bin/safe-step" /usr/local/bin/safe-step
+   ```
+4. **Get the local environment file** (`.env.local`) from Diogo over Slack/Signal — it contains the keys to talk to the database. **Don't share it.**
+
+That's it. The AI's project tools (including a docs lookup called context7) auto-configure when you run Gemini in this folder — you don't install anything else.
+
+---
+
 ## What you have
 
 - A live app: **https://safestep-lisbon-one.vercel.app/**
