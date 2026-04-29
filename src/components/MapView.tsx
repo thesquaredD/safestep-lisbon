@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import {
   Map,
   Marker,
-  Popup,
   Source,
   Layer,
   NavigationControl,
@@ -10,10 +9,17 @@ import {
 import type { LayerProps } from 'react-map-gl/maplibre'
 import type { FeatureCollection, Point } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { Coffee, Cross, Beer, Store, AlertTriangle, Lightbulb, Construction, Eye, AlertCircle } from 'lucide-react'
+import {
+  Coffee, Cross, Beer, Store,
+  AlertTriangle, Lightbulb, Construction, Eye, AlertCircle,
+} from 'lucide-react'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 import { useHazards, type Hazard } from '@/data/hazards'
-import { ORIGIN, DESTINATION, allRoutesFeature, routeFeature, ROUTE_COLORS, type RouteId } from '@/data/routes'
+import {
+  ORIGIN, DESTINATION,
+  allRoutesFeature, routeFeature, ROUTE_COLORS, type RouteId,
+} from '@/data/routes'
+import { MapPopup, type PopupSelection } from './MapPopup'
 
 // Free vector tiles, no API key.
 const TILES = 'https://tiles.openfreemap.org/styles/positron'
@@ -28,20 +34,12 @@ const hazardIconFor = (k: Hazard['kind']) =>
   : k === 'unsafe_crossing' ? AlertCircle
   : AlertTriangle
 
-type Selection =
-  | { kind: 'origin' }
-  | { kind: 'destination' }
-  | { kind: 'sanctuary'; data: Sanctuary }
-  | { kind: 'hazard'; data: Hazard }
-  | null
-
 type Props = {
-  /** When set, only this route is drawn (used in active-walk view). */
   selectedRoute?: RouteId
-  /** When false, hide the destination marker (e.g., browsing mode). */
   showDestination?: boolean
-  /** When false, hide the on-map nav controls (small previews). */
   showControls?: boolean
+  /** Called when a marker is selected/deselected — lets the parent collapse a drawer if needed. */
+  onSelectionChange?: (hasSelection: boolean) => void
   className?: string
 }
 
@@ -49,18 +47,24 @@ export function MapView({
   selectedRoute,
   showDestination = true,
   showControls = true,
+  onSelectionChange,
   className,
 }: Props) {
   const { data: sanctuaries } = useSanctuaries()
   const { data: hazards } = useHazards()
-  const [selection, setSelection] = useState<Selection>(null)
+  const [selection, setSelection] = useState<PopupSelection | null>(null)
+
+  // Notify the parent so the mobile drawer can collapse and give the popup room.
+  const select = (s: PopupSelection | null) => {
+    setSelection(s)
+    onSelectionChange?.(s !== null)
+  }
 
   const routesFC = useMemo(
     () => (selectedRoute ? routeFeature(selectedRoute) : allRoutesFeature()),
     [selectedRoute],
   )
 
-  // Geo features for the safety-zone halo around each sanctuary.
   const sanctuariesFC = useMemo<FeatureCollection<Point>>(() => ({
     type: 'FeatureCollection',
     features: (sanctuaries ?? [])
@@ -84,7 +88,7 @@ export function MapView({
         touchZoomRotate
         doubleClickZoom
         style={{ width: '100%', height: '100%' }}
-        onClick={() => setSelection(null)}
+        onClick={() => select(null)}
       >
         {showControls && (
           <NavigationControl position="bottom-right" showCompass={false} showZoom={true} />
@@ -148,11 +152,11 @@ export function MapView({
           longitude={ORIGIN.lng}
           latitude={ORIGIN.lat}
           anchor="bottom"
-          onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'origin' }) }}
+          onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'origin' }) }}
         >
           <button
             type="button"
-            className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-full"
+            className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-full transition hover:scale-105 active:scale-95"
             aria-label="Home"
           >
             <TeardropPin color="#7c3aed" />
@@ -165,11 +169,11 @@ export function MapView({
             longitude={DESTINATION.lng}
             latitude={DESTINATION.lat}
             anchor="bottom"
-            onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'destination' }) }}
+            onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'destination' }) }}
           >
             <button
               type="button"
-              className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-risk rounded-full"
+              className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-risk rounded-full transition hover:scale-105 active:scale-95"
               aria-label="Destination"
             >
               <TeardropPin color="#ef4444" />
@@ -187,12 +191,12 @@ export function MapView({
               longitude={s.lng}
               latitude={s.lat}
               anchor="center"
-              onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'sanctuary', data: s }) }}
+              onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'sanctuary', data: s }) }}
             >
               <button
                 type="button"
                 aria-label={s.name ?? 'Sanctuary'}
-                className="cursor-pointer block w-9 h-9 rounded-xl bg-brand-500 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300"
+                className="cursor-pointer block w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300"
               >
                 <Icon size={18} />
               </button>
@@ -211,7 +215,7 @@ export function MapView({
               longitude={h.lng}
               latitude={h.lat}
               anchor="center"
-              onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'hazard', data: h }) }}
+              onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'hazard', data: h }) }}
             >
               <button
                 type="button"
@@ -224,81 +228,8 @@ export function MapView({
           )
         })}
 
-        {/* Single popup for whatever's currently selected */}
-        {selection && <SelectionPopup selection={selection} onClose={() => setSelection(null)} />}
+        {selection && <MapPopup selection={selection} onClose={() => select(null)} />}
       </Map>
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-function SelectionPopup({ selection, onClose }: { selection: Selection; onClose: () => void }) {
-  if (!selection) return null
-
-  if (selection.kind === 'origin') {
-    return (
-      <Popup longitude={ORIGIN.lng} latitude={ORIGIN.lat} anchor="bottom" offset={28} onClose={onClose} closeOnClick={false} closeButton>
-        <PopupCard title="Home" subtitle={ORIGIN.label.replace(/^Home — /, '')} />
-      </Popup>
-    )
-  }
-  if (selection.kind === 'destination') {
-    return (
-      <Popup longitude={DESTINATION.lng} latitude={DESTINATION.lat} anchor="bottom" offset={28} onClose={onClose} closeOnClick={false} closeButton>
-        <PopupCard title="Destination" subtitle={DESTINATION.label} />
-      </Popup>
-    )
-  }
-  if (selection.kind === 'sanctuary') {
-    const s = selection.data
-    if (s.lat == null || s.lng == null) return null
-    return (
-      <Popup longitude={s.lng} latitude={s.lat} anchor="bottom" offset={20} onClose={onClose} closeOnClick={false} closeButton>
-        <PopupCard
-          title={s.name ?? 'Sanctuary'}
-          subtitle={s.address ?? undefined}
-          body={s.description ?? undefined}
-          tag={s.is_open_now ? 'Open now' : 'Closed'}
-          tagTone={s.is_open_now ? 'safe' : 'neutral'}
-        />
-      </Popup>
-    )
-  }
-  // hazard
-  const h = selection.data
-  if (h.lat == null || h.lng == null) return null
-  return (
-    <Popup longitude={h.lng} latitude={h.lat} anchor="bottom" offset={18} onClose={onClose} closeOnClick={false} closeButton>
-      <PopupCard
-        title={h.title ?? 'Hazard'}
-        subtitle={h.description ?? undefined}
-        tag={h.status ?? undefined}
-        tagTone={h.status === 'resolved' ? 'safe' : h.status === 'verified' ? 'warn' : 'warn'}
-      />
-    </Popup>
-  )
-}
-
-function PopupCard({
-  title, subtitle, body, tag, tagTone = 'neutral',
-}: {
-  title: string; subtitle?: string; body?: string;
-  tag?: string; tagTone?: 'safe' | 'warn' | 'risk' | 'neutral'
-}) {
-  const tagBg =
-    tagTone === 'safe' ? 'bg-emerald-100 text-emerald-800'
-    : tagTone === 'warn' ? 'bg-amber-100 text-amber-800'
-    : tagTone === 'risk' ? 'bg-red-100 text-red-800'
-    : 'bg-neutral-100 text-neutral-700'
-  return (
-    <div className="px-1 pb-1 max-w-[200px]">
-      <div className="flex items-start justify-between gap-2 mb-0.5">
-        <p className="font-semibold text-sm leading-tight">{title}</p>
-        {tag && <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${tagBg}`}>{tag}</span>}
-      </div>
-      {subtitle && <p className="text-xs text-neutral-500 leading-snug">{subtitle}</p>}
-      {body && <p className="text-xs text-neutral-700 mt-1 leading-snug line-clamp-3">{body}</p>}
     </div>
   )
 }

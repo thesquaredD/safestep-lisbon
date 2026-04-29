@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Display: Fraunces (variable serif). Body: Geist (variable sans). Both free. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Geist:wght@400;500;600;700&display=swap');
+
 @theme {
   /* SafeStep brand */
   --color-brand-50:  #f7f3ff;
@@ -12,38 +15,125 @@
   --color-brand-700: #581ca8;
   --color-brand-800: #441885;
   --color-brand-900: #2e1065;
+  /* Ink (used for the dark sidebar; subtly purple, near-black) */
+  --color-ink-900:   #1a1525;
+  --color-ink-800:   #221c30;
+  --color-ink-700:   #2c243d;
 
-  /* Safety scale colors (Safest=green, Balanced=amber, Fastest=red) */
+  /* Safety scale colors */
   --color-safe:    #22c55e;
   --color-warn:    #f59e0b;
   --color-risk:    #ef4444;
 
-  /* Surfaces */
-  --color-surface:    #ffffff;
-  --color-surface-2:  #fafafa;
-  --color-surface-3:  #f4f3f7;
+  /* Surfaces — ivory, not stark white */
+  --color-surface:    #fbfaf6;
+  --color-surface-2:  #f7f5f0;
+  --color-surface-3:  #efece4;
 
   --radius-card: 1rem;
   --radius-pill: 9999px;
+
+  /* Type families exposed as Tailwind utilities (font-display, font-sans) */
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans:    "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Brand-tinted floating-panel shadow — much warmer than a generic neutral shadow */
+  --shadow-float: 0 1px 0 rgba(124, 58, 237, 0.04),
+                  0 4px 14px -4px rgba(124, 58, 237, 0.16),
+                  0 24px 48px -16px rgba(124, 58, 237, 0.18);
 }
 
 html, body, #root { height: 100%; }
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   background: var(--color-surface-2);
-  color: #111;
+  color: #14101c;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Mobile-first phone-frame on desktop so the SPA feels like a real app at all viewports */
+/* Phone-frame ONLY applies when the .phone-frame class is set AND the viewport is mobile.
+   Previously this also kicked in on desktop, which gave us the regression vs Lovable. */
 @media (min-width: 768px) {
-  .phone-frame {
-    max-width: 420px;
-    margin-inline: auto;
-    border: 1px solid #e5e5e5;
-    border-radius: 28px;
-    overflow: hidden;
-    box-shadow: 0 30px 80px -30px rgba(124, 58, 237, 0.25);
-    height: min(900px, 100svh);
+  .phone-frame { /* explicitly drop the desktop phone treatment */
+    max-width: none;
+    margin-inline: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    height: auto;
   }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Subtle grain texture for dark surfaces (sidebar). Tiny inline SVG keeps
+   it dependency-free. The `mix-blend-mode: overlay` makes it feel film-like
+   instead of dirty. */
+.grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.18 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  background-size: 180px 180px;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Override MapLibre's popup chrome so we can render our own card.
+   We hide the close button + tip + the white wrapper, then style our card
+   directly inside .maplibregl-popup-content. */
+.maplibregl-popup-content {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.maplibregl-popup-close-button { display: none !important; }
+.maplibregl-popup-tip          { display: none !important; }
+.maplibregl-popup               { z-index: 5; max-width: 320px !important; }
+.maplibregl-popup-anchor-bottom,
+.maplibregl-popup-anchor-top,
+.maplibregl-popup-anchor-left,
+.maplibregl-popup-anchor-right { filter: drop-shadow(0 14px 32px rgba(124, 58, 237, 0.18)); }
+
+/* Subtle popup entrance (no bounce — calm). */
+@keyframes popup-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.popup-card {
+  animation: popup-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Staggered reveal for sidebar nav items on first paint. The data-i attribute
+   carries the index so we can fan out the delays without a JS animation lib. */
+@keyframes nav-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.nav-stagger > * {
+  animation: nav-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(60ms * var(--i, 0));
+}
+
+/* MapLibre's NavigationControl gets a coat of paint to match the floating-card
+   aesthetic — soft white card, brand-tinted shadow, square rounded corners. */
+.maplibregl-ctrl-group {
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-float) !important;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(20, 16, 28, 0.06) !important;
+}
+.maplibregl-ctrl-group button { background: transparent !important; }
+.maplibregl-ctrl-group button:hover { background: rgba(124, 58, 237, 0.06) !important; }
+
+/* Map attribution: tasteful, smaller. */
+.maplibregl-ctrl-attrib {
+  font-size: 10px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 8px !important;
 }
