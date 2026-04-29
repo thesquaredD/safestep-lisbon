@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Search, Footprints, Shield, Radio, AlertTriangle, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { MapView } from '@/components/MapView'
 
 type RouteOption = { id: 'safest' | 'balanced' | 'fastest'; label: string; score: number; minutes: number; km: number; tone: 'safe' | 'warn' | 'risk' }
 const routes: RouteOption[] = [
@@ -24,9 +25,8 @@ export function MapPage() {
         </div>
       </div>
 
-      {/* Map placeholder — MapLibre lands in step 5 */}
-      <div className="mx-4 mt-3 h-56 rounded-2xl bg-[radial-gradient(circle_at_30%_40%,#e9e2f7,#d8d2e9)] grid place-items-center text-neutral-400 text-sm">
-        Map preview (MapLibre coming)
+      <div className="mx-4 mt-3 h-56 rounded-2xl overflow-hidden border border-neutral-200">
+        <MapView selectedRoute={open} />
       </div>
 
       {/* Route options */}

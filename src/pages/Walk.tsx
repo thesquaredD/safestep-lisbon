@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { ChevronLeft, MapPinned, Lightbulb, Footprints, Store, CheckCircle2, RotateCcw } from 'lucide-react'
+import { MapView } from '@/components/MapView'
 
 export function WalkPage() {
   return (
@@ -19,8 +20,8 @@ export function WalkPage() {
         <Stat icon={Store} label="Stores" value="2 open" tone="safe" />
       </div>
 
-      <div className="flex-1 bg-[radial-gradient(circle_at_30%_40%,#e9e2f7,#d8d2e9)] grid place-items-center text-neutral-400 text-sm">
-        Live route preview (MapLibre coming)
+      <div className="flex-1 relative">
+        <MapView selectedRoute="safest" />
       </div>
 
       <div className="grid grid-cols-2 gap-2 p-3 border-t border-neutral-200 bg-white">
