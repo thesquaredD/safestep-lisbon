@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  /* SafeStep brand */
+  --color-brand-50:  #f7f3ff;
+  --color-brand-100: #ede4ff;
+  --color-brand-200: #d6c0ff;
+  --color-brand-300: #b893ff;
+  --color-brand-400: #9961ff;
+  --color-brand-500: #7c3aed;
+  --color-brand-600: #6c1dd1;
+  --color-brand-700: #581ca8;
+  --color-brand-800: #441885;
+  --color-brand-900: #2e1065;
+
+  /* Safety scale colors (Safest=green, Balanced=amber, Fastest=red) */
+  --color-safe:    #22c55e;
+  --color-warn:    #f59e0b;
+  --color-risk:    #ef4444;
+
+  /* Surfaces */
+  --color-surface:    #ffffff;
+  --color-surface-2:  #fafafa;
+  --color-surface-3:  #f4f3f7;
+
+  --radius-card: 1rem;
+  --radius-pill: 9999px;
+}
+
+html, body, #root { height: 100%; }
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-surface-2);
+  color: #111;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Mobile-first phone-frame on desktop so the SPA feels like a real app at all viewports */
+@media (min-width: 768px) {
+  .phone-frame {
+    max-width: 420px;
+    margin-inline: auto;
+    border: 1px solid #e5e5e5;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px -30px rgba(124, 58, 237, 0.25);
+    height: min(900px, 100svh);
+  }
+}
