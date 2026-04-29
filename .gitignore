@@ -34,3 +34,4 @@ _recon
 *.sln
 *.sw?
 .vercel
+/local/

@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# safe-step — friendly wrapper for the SafeStep team's Gemini-driven workflow.
+#
+# Hides the bits that aren't worth learning right now:
+#   - branch creation
+#   - commit message conventions
+#   - finding the preview URL
+#   - rolling back
+#
+# Usage:
+#   safe-step new <branch-name>     create a new branch from main
+#   safe-step ai                    open Gemini CLI in this project
+#   safe-step ship "<message>"      add + commit + push (triggers preview deploy)
+#   safe-step preview               print the latest preview URL
+#   safe-step undo                  revert the last commit you pushed
+#   safe-step status                show what's changed and what branch you're on
+#   safe-step prod                  open the production URL
+#
+# Run from anywhere in the project. No options, no flags.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$REPO_ROOT" ]]; then
+  echo "✖ not inside a git repo" >&2
+  exit 1
+fi
+cd "$REPO_ROOT"
+
+PROD_URL="https://safestep-lisbon-one.vercel.app"
+
+cmd="${1:-help}"
+shift || true
+
+slugify() {
+  printf "%s" "$1" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g'
+}
+
+case "$cmd" in
+  new)
+    name="${1:-}"
+    if [[ -z "$name" ]]; then
+      echo "Usage: safe-step new \"<short feature description>\""
+      exit 1
+    fi
+    branch="$(slugify "$name")"
+    if [[ -z "$branch" ]]; then
+      echo "✖ couldn't make a branch name from \"$name\""
+      exit 1
+    fi
+    git checkout main
+    git pull --ff-only
+    git checkout -b "$branch"
+    echo "✓ on branch '$branch'. Now ask Gemini what you want to build."
+    ;;
+
+  ai)
+    if ! command -v gemini >/dev/null 2>&1; then
+      echo "✖ gemini CLI not installed. See: https://github.com/google-gemini/gemini-cli" >&2
+      exit 1
+    fi
+    exec gemini
+    ;;
+
+  ship)
+    msg="${1:-}"
+    if [[ -z "$msg" ]]; then
+      echo "Usage: safe-step ship \"<short message describing what changed>\""
+      exit 1
+    fi
+    branch="$(git symbolic-ref --short HEAD)"
+    if [[ "$branch" == "main" ]]; then
+      echo "✖ you're on main. Run 'safe-step new <name>' first."
+      exit 1
+    fi
+    echo "→ type-checking with pnpm build..."
+    if ! pnpm build >/dev/null 2>&1; then
+      echo "✖ build failed. Fix the errors, then 'safe-step ship' again."
+      pnpm build  # re-run to show the errors
+      exit 1
+    fi
+    git add -A
+    if git diff --cached --quiet; then
+      echo "✖ no changes to ship."
+      exit 1
+    fi
+    git commit -m "$msg"
+    echo "→ pushing to GitHub..."
+    git push -u origin "$branch"
+    echo
+    echo "✓ shipped. Vercel is now building a preview."
+    echo "  Run 'safe-step preview' in ~30s to see the URL."
+    ;;
+
+  preview)
+    branch="$(git symbolic-ref --short HEAD)"
+    if [[ "$branch" == "main" ]]; then
+      url="$PROD_URL"
+    else
+      # Vercel's preview URL convention:
+      url="https://safestep-lisbon-git-${branch}-thesquaredds-projects.vercel.app"
+    fi
+    echo "$url"
+    if command -v open >/dev/null 2>&1; then open "$url"; fi
+    ;;
+
+  prod)
+    echo "$PROD_URL"
+    if command -v open >/dev/null 2>&1; then open "$PROD_URL"; fi
+    ;;
+
+  undo)
+    branch="$(git symbolic-ref --short HEAD)"
+    if [[ "$branch" == "main" ]]; then
+      echo "✖ refusing to undo on main. Make a new branch and revert there."
+      exit 1
+    fi
+    last_msg="$(git log -1 --pretty=%s)"
+    echo "→ this will revert the last commit: \"$last_msg\""
+    read -r -p "  proceed? [y/N] " yn
+    case "$yn" in
+      y|Y|yes) ;;
+      *) echo "  cancelled."; exit 0 ;;
+    esac
+    git revert --no-edit HEAD
+    git push
+    echo "✓ undone. The preview URL will redeploy without the bad change."
+    ;;
+
+  status)
+    echo "branch:  $(git symbolic-ref --short HEAD)"
+    echo "remote:  $(git config --get remote.origin.url)"
+    echo
+    echo "changes:"
+    git status --short || true
+    ;;
+
+  help|--help|-h|"")
+    sed -n '2,/^# Run from anywhere/p' "$0" | sed 's/^# \{0,1\}//'
+    ;;
+
+  *)
+    echo "✖ unknown command: $cmd"
+    echo "  run 'safe-step' to see available commands."
+    exit 1
+    ;;
+esac
