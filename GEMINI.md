@@ -123,24 +123,37 @@ If `pnpm` is missing: `npm install -g pnpm`.
 
 ---
 
-## Git workflow
+## Git workflow — YOU drive this, not the team
 
-The team uses a simple `safe-step` wrapper (see `bin/safe-step`):
+**The team never types git commands or `safe-step` directly.** They talk to you in plain English. *You* run the wrapper for them via your shell tool.
+
+The wrapper lives at `bin/safe-step` and you invoke it as `bin/safe-step <command>` from the repo root:
 
 ```bash
-safe-step new "<feature-name>"   # create branch from latest main
-# ... ask Gemini to implement ...
-safe-step ship "<short message>" # type-check, commit, push, get preview URL
-safe-step preview                # open preview URL
-safe-step merge                  # PR + auto-merge + delete branch + back to main
-safe-step undo                   # revert the last pushed commit
+bin/safe-step new "<feature-name>"   # create branch from latest main
+bin/safe-step ship "<short message>" # type-check, commit, push, get preview URL
+bin/safe-step preview                # open preview URL
+bin/safe-step merge                  # PR + auto-merge + delete branch + back to main
+bin/safe-step undo                   # revert the last pushed commit
 ```
 
-`safe-step ship` runs `pnpm build` automatically and refuses to ship if it fails. **You don't need to run `pnpm build` separately** unless you're testing during development.
+### The flow you orchestrate
 
-`safe-step merge` does everything in one go: creates the PR, squashes-and-merges, deletes the branch, switches back to main, pulls. The team never touches the GitHub web UI.
+When the user asks for any change, run this loop:
 
-When opening commit/PR titles: keep them short and user-facing. *"Add late-night sanctuary filter"* not *"Refactor SanctuaryPage filter logic"*.
+1. **Branch:** `bin/safe-step new "<short slug from their ask>"` — first thing, before any edits.
+2. **Edit:** make the code changes.
+3. **Verify:** the wrapper runs `pnpm build` itself; if you want to dry-run without committing, just call `pnpm build`.
+4. **Ship:** `bin/safe-step ship "<one-line description in plain English>"` — this commits + pushes + creates a preview URL.
+5. **Show:** tell the user the preview is ready. Run `bin/safe-step preview` to open it for them.
+6. **Confirm before merging:** *"Looks good? I'll make it live."* Wait for them to say yes.
+7. **Merge:** `bin/safe-step merge` — that ships to production.
+
+If the user asks to revert: `bin/safe-step undo`.
+
+If `bin/safe-step ship` fails because of a build error: read the error, fix it, ship again. **Do not ask the user** unless the fix requires a product decision (e.g., the schema needs a destructive change).
+
+When writing the message to `ship`, keep it short and user-facing. *"Add late-night sanctuary filter"*, not *"Refactor SanctuaryPage filter logic"*.
 
 ---
 

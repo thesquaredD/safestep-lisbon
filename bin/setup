@@ -11,8 +11,11 @@
 #   - Project dependencies
 #
 # What it sets up:
-#   - safe-step on PATH (symlink in /usr/local/bin)
-#   - .env.local check (warns if missing — Diogo must hand it over separately)
+#   - Project dependencies installed
+#   - GitHub CLI authenticated
+#
+# `safe-step` is invoked as `bin/safe-step` from the project root — Gemini
+# runs it for you. No PATH symlink needed.
 
 set -euo pipefail
 
@@ -74,28 +77,12 @@ step "Installing project dependencies"
 pnpm install
 ok "dependencies installed"
 
-# ---- 5. Make safe-step available everywhere --------------------------------
-step "Linking safe-step into your PATH"
-LINK_TARGET="/usr/local/bin/safe-step"
-if [[ -L "$LINK_TARGET" || -e "$LINK_TARGET" ]]; then
-  ok "already linked"
+# ---- 5. Verify environment --------------------------------------------------
+step "Verifying environment"
+if [[ -f .env ]]; then
+  ok "found .env (Supabase keys committed in the repo)"
 else
-  if sudo ln -s "$REPO_ROOT/bin/safe-step" "$LINK_TARGET" 2>/dev/null; then
-    ok "linked $LINK_TARGET"
-  else
-    warn "couldn't symlink (need sudo). Run this manually later:"
-    echo "    sudo ln -s \"$REPO_ROOT/bin/safe-step\" /usr/local/bin/safe-step"
-  fi
-fi
-
-# ---- 6. .env.local check ----------------------------------------------------
-step "Checking environment file (.env.local)"
-if [[ -f .env.local ]]; then
-  ok ".env.local present"
-else
-  warn ".env.local is MISSING."
-  echo "    Ask Diogo for the file and save it as 'safestep-lisbon/.env.local'."
-  echo "    Without it, the app can't talk to the database."
+  warn ".env is missing — repo may be incomplete. Run 'git pull'."
 fi
 
 echo

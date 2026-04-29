@@ -16,9 +16,10 @@ dist-ssr
 _recon
 
 # Local env
-.env
+# .env is committed (Supabase URL + public anon key — public-by-design with RLS)
 .env.local
 .env.*.local
+.env.supabase.local
 
 # Supabase local stack (if used)
 .supabase/
