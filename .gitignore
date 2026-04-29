@@ -33,3 +33,4 @@ _recon
 *.njsproj
 *.sln
 *.sw?
+.vercel

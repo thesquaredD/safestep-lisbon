@@ -1,0 +1,47 @@
+-- Seed: Lisbon sanctuary spaces + hazard reports for the demo
+-- Coordinates are approximate, in central Lisbon (Chiado / Baixa / Bairro Alto).
+
+insert into sanctuary_spaces (name, kind, address, description, location, is_open_now, hours_text, verified) values
+  ('A Brasileira', 'cafe',
+    'Rua Garrett 120, Chiado',
+    'Iconic late-night café. Staff trained in safety assistance.',
+    st_setsrid(st_makepoint(-9.1419, 38.7104), 4326)::geography,
+    true, 'Open 24h', true),
+  ('Farmácia Estácio', 'pharmacy',
+    'Rua da Prata 35, Baixa',
+    '24-hour pharmacy with safe waiting area and staff assistance.',
+    st_setsrid(st_makepoint(-9.1369, 38.7124), 4326)::geography,
+    true, '24h', true),
+  ('Bar Tejo', 'bar',
+    'Rua dos Bacalhoeiros 12, Alfama',
+    'Bar with trained Ask for Angela staff. SafeStep program partner.',
+    st_setsrid(st_makepoint(-9.1330, 38.7113), 4326)::geography,
+    true, '18:00 — 02:00', true),
+  ('Loja da Atalaia', 'store',
+    'Rua da Atalaia 45, Bairro Alto',
+    'Female-owned boutique in Bairro Alto. SafeStep Sanctuary Network.',
+    st_setsrid(st_makepoint(-9.1466, 38.7140), 4326)::geography,
+    false, 'Mon–Sat 11:00 — 19:00', true),
+  ('Café Lisboa', 'cafe',
+    'Praça do Comércio 4, Baixa',
+    'Open late at the heart of Lisbon. Trained staff and visible street.',
+    st_setsrid(st_makepoint(-9.1366, 38.7079), 4326)::geography,
+    true, '08:00 — 02:00', true);
+
+insert into hazard_reports (title, kind, status, description, location, created_at) values
+  ('Broken Streetlight', 'broken_light', 'verified',
+    'Street light out near Rua dos Fanqueiros intersection',
+    st_setsrid(st_makepoint(-9.1373, 38.7115), 4326)::geography,
+    now() - interval '2 hours'),
+  ('Blocked Walkway', 'blocked_walkway', 'new',
+    'Construction debris blocking Calçada do Carmo sidewalk',
+    st_setsrid(st_makepoint(-9.1411, 38.7126), 4326)::geography,
+    now() - interval '45 minutes'),
+  ('Poor Visibility', 'poor_visibility', 'new',
+    'Overgrown trees blocking streetlight on Rua da Madalena',
+    st_setsrid(st_makepoint(-9.1361, 38.7108), 4326)::geography,
+    now() - interval '1 hour'),
+  ('Unsafe Crossing', 'unsafe_crossing', 'resolved',
+    'Missing crosswalk markings on Avenida da Liberdade',
+    st_setsrid(st_makepoint(-9.1452, 38.7184), 4326)::geography,
+    now() - interval '3 days');
