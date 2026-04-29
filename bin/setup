@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# bin/setup — one-shot SafeStep dev environment setup.
+#
+# Designed for Diogo to run once per teammate's laptop. Or run it on your own.
+# Idempotent: safe to re-run.
+#
+# What it installs:
+#   - pnpm (via npm)
+#   - Gemini CLI (@google/gemini-cli)
+#   - GitHub CLI (gh) — used by `safe-step merge`
+#   - Project dependencies
+#
+# What it sets up:
+#   - safe-step on PATH (symlink in /usr/local/bin)
+#   - .env.local check (warns if missing — Diogo must hand it over separately)
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$REPO_ROOT" ]]; then
+  echo "✖ run this from inside the SafeStep project folder."
+  echo "  Try: cd safestep-lisbon && bin/setup"
+  exit 1
+fi
+cd "$REPO_ROOT"
+
+step() { echo; echo "▸ $1"; }
+ok()   { echo "  ✓ $1"; }
+warn() { echo "  ⚠ $1"; }
+
+# ---- 1. Node + pnpm ---------------------------------------------------------
+step "Checking Node.js"
+if ! command -v node >/dev/null 2>&1; then
+  echo "  ✖ Node.js is not installed."
+  echo "    Download from https://nodejs.org/ (pick the LTS version) and re-run this."
+  exit 1
+fi
+ok "Node $(node -v)"
+
+step "Checking pnpm"
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "  Installing pnpm globally via npm..."
+  npm install -g pnpm
+fi
+ok "pnpm $(pnpm -v)"
+
+# ---- 2. Gemini CLI ----------------------------------------------------------
+step "Checking Gemini CLI"
+if ! command -v gemini >/dev/null 2>&1; then
+  echo "  Installing Gemini CLI globally..."
+  npm install -g @google/gemini-cli
+fi
+ok "$(gemini --version 2>/dev/null | head -1)"
+
+# ---- 3. GitHub CLI ----------------------------------------------------------
+step "Checking GitHub CLI (gh)"
+if ! command -v gh >/dev/null 2>&1; then
+  if [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null 2>&1; then
+    brew install gh
+  else
+    echo "  ⚠ Please install gh manually: https://cli.github.com/"
+    echo "    Then re-run this script."
+    exit 1
+  fi
+fi
+ok "gh $(gh --version | head -1 | awk '{print $3}')"
+if ! gh auth status >/dev/null 2>&1; then
+  echo "  Now sign in to GitHub. A browser will open."
+  gh auth login -h github.com -p https -w
+fi
+
+# ---- 4. Project deps --------------------------------------------------------
+step "Installing project dependencies"
+pnpm install
+ok "dependencies installed"
+
+# ---- 5. Make safe-step available everywhere --------------------------------
+step "Linking safe-step into your PATH"
+LINK_TARGET="/usr/local/bin/safe-step"
+if [[ -L "$LINK_TARGET" || -e "$LINK_TARGET" ]]; then
+  ok "already linked"
+else
+  if sudo ln -s "$REPO_ROOT/bin/safe-step" "$LINK_TARGET" 2>/dev/null; then
+    ok "linked $LINK_TARGET"
+  else
+    warn "couldn't symlink (need sudo). Run this manually later:"
+    echo "    sudo ln -s \"$REPO_ROOT/bin/safe-step\" /usr/local/bin/safe-step"
+  fi
+fi
+
+# ---- 6. .env.local check ----------------------------------------------------
+step "Checking environment file (.env.local)"
+if [[ -f .env.local ]]; then
+  ok ".env.local present"
+else
+  warn ".env.local is MISSING."
+  echo "    Ask Diogo for the file and save it as 'safestep-lisbon/.env.local'."
+  echo "    Without it, the app can't talk to the database."
+fi
+
+echo
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Setup complete. Read TEAM.md and try the practice task at the bottom."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

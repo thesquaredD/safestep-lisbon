@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # safe-step — friendly wrapper for the SafeStep team's Gemini-driven workflow.
 #
-# Hides the bits that aren't worth learning right now:
-#   - branch creation
-#   - commit message conventions
-#   - finding the preview URL
-#   - rolling back
+# Designed for non-technical users. Hides everything about git, branches, PRs.
+# When something unexpected happens, the wrapper points the user at Diogo
+# rather than asking them to interpret git output.
 #
 # Usage:
 #   safe-step new "<feature description>"   start a new isolated change
 #   safe-step ai                             open Gemini CLI in this project
-#   safe-step ship "<message>"               add + commit + push (preview URL)
+#   safe-step ship "<message>"               save your change + create preview
+#   safe-step preview                        open your preview URL
+#   safe-step merge                          make your change live (no UI needed)
+#   safe-step undo                           revert the last shipped commit
+#   safe-step prod                           open the live app
+#   safe-step status                         what branch / what changed
+#
+# Internal commands (Diogo / power users):
 #   safe-step sync                           pull latest main into your branch
-#   safe-step preview                        open the preview URL
-#   safe-step pr ["<title>"]                 open a PR to merge into the live app
-#   safe-step undo                           revert the last commit you pushed
-#   safe-step status                         what's changed, what branch you're on
-#   safe-step prod                           open the production URL
 #
 # Run from anywhere in the project. No options, no flags.
 
@@ -24,12 +24,14 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$REPO_ROOT" ]]; then
-  echo "✖ not inside a git repo" >&2
+  echo "✖ I need to be run from inside the SafeStep folder." >&2
+  echo "  cd ~/Development/safe_step (or wherever you cloned it) and try again." >&2
   exit 1
 fi
 cd "$REPO_ROOT"
 
 PROD_URL="https://safestep-lisbon-one.vercel.app"
+GH_REPO="thesquaredD/safestep-lisbon"
 
 cmd="${1:-help}"
 shift || true
@@ -40,59 +42,55 @@ slugify() {
     | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g'
 }
 
+ping_diogo() {
+  echo
+  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "  Something unexpected happened. This isn't your fault."
+  echo "  Take a screenshot of this terminal and message Diogo."
+  echo "  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+}
+
 case "$cmd" in
   new)
     name="${1:-}"
     if [[ -z "$name" ]]; then
       echo "Usage: safe-step new \"<short feature description>\""
+      echo "Example: safe-step new \"filter sanctuaries by hours\""
       exit 1
     fi
     branch="$(slugify "$name")"
     if [[ -z "$branch" ]]; then
-      echo "✖ couldn't make a branch name from \"$name\""
+      echo "✖ I couldn't make a workspace name from \"$name\"."
+      echo "  Try something with letters and spaces, like \"filter sanctuaries\"."
       exit 1
     fi
-    echo "→ fetching latest from GitHub..."
-    git fetch origin --quiet
+    echo "→ getting the latest live version..."
+    if ! git fetch origin --quiet 2>/dev/null; then
+      echo "✖ I can't reach GitHub. Are you online?"
+      ping_diogo
+      exit 1
+    fi
     if git rev-parse --verify --quiet "refs/heads/$branch" >/dev/null \
        || git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then
-      echo "✖ a branch called '$branch' already exists (yours or someone else's)."
-      echo "  Try a different description, or 'git checkout $branch' to continue that work."
+      echo "✖ a workspace called '$branch' already exists."
+      echo "  Either someone else is working on the same thing, or you started this earlier."
+      echo "  Try a different description, like \"safe-step new '$name v2'\"."
       exit 1
     fi
-    git checkout main
-    git pull --ff-only
-    git checkout -b "$branch"
-    # Warn if there are uncommitted changes hanging around from a previous session.
-    if [[ -n "$(git status --porcelain)" ]]; then
-      echo "ℹ note: you have uncommitted changes carried over from before. They're now on this branch."
-    fi
-    echo "✓ on branch '$branch'. Now ask Gemini what you want to build."
-    ;;
-
-  sync)
-    branch="$(git symbolic-ref --short HEAD)"
-    if [[ "$branch" == "main" ]]; then
-      git pull --ff-only
-      echo "✓ main is up to date."
-      exit 0
-    fi
-    echo "→ pulling latest main and merging into '$branch'..."
-    git fetch origin --quiet
-    if ! git merge --no-edit origin/main; then
-      echo
-      echo "✖ merge conflict — someone else changed the same lines you did."
-      echo "  Don't panic. Run 'safe-step ai' and tell Gemini:"
-      echo "    \"there's a merge conflict — help me resolve it\""
-      echo "  If Gemini can't sort it out, send the output of 'git status' to Diogo."
+    if ! git checkout main >/dev/null 2>&1 || ! git pull --ff-only --quiet 2>/dev/null; then
+      echo "✖ I couldn't refresh the latest version of the app."
+      ping_diogo
       exit 1
     fi
-    echo "✓ '$branch' now includes the latest main."
+    git checkout -b "$branch" >/dev/null 2>&1
+    echo "✓ workspace '$branch' is ready."
+    echo "  Run 'safe-step ai' to start describing what you want to build."
     ;;
 
   ai)
     if ! command -v gemini >/dev/null 2>&1; then
-      echo "✖ gemini CLI not installed. See: https://github.com/google-gemini/gemini-cli" >&2
+      echo "✖ Gemini isn't installed on this laptop yet."
+      echo "  Ask Diogo to run 'bin/setup' on your machine — it installs everything."
       exit 1
     fi
     exec gemini
@@ -101,53 +99,51 @@ case "$cmd" in
   ship)
     msg="${1:-}"
     if [[ -z "$msg" ]]; then
-      echo "Usage: safe-step ship \"<short message describing what changed>\""
+      echo "Usage: safe-step ship \"<short message about what you changed>\""
+      echo "Example: safe-step ship \"add late-night filter\""
       exit 1
     fi
     branch="$(git symbolic-ref --short HEAD)"
     if [[ "$branch" == "main" ]]; then
-      echo "✖ you're on main. Run 'safe-step new <name>' first."
+      echo "✖ you're not in a workspace. Run 'safe-step new \"<description>\"' first."
       exit 1
     fi
-    echo "→ type-checking with pnpm build..."
+    echo "→ checking the code is valid..."
     if ! pnpm build >/dev/null 2>&1; then
-      echo "✖ build failed. Fix the errors, then 'safe-step ship' again."
-      pnpm build  # re-run to show the errors
+      echo "✖ the code has a problem and I can't ship it as-is."
+      echo "  Run 'safe-step ai' and tell Gemini:"
+      echo "    \"the build is failing — what's wrong?\""
+      echo "  Once Gemini fixes it, run 'safe-step ship' again."
       exit 1
     fi
     git add -A
     if git diff --cached --quiet; then
-      echo "✖ no changes to ship."
+      echo "✖ I don't see any changes to ship. Did Gemini actually edit anything?"
       exit 1
     fi
-    git commit -m "$msg"
-    echo "→ pushing to GitHub..."
-    if ! git push -u origin "$branch" 2>&1; then
-      echo
-      echo "✖ push rejected. Usually this means main has moved since you started."
-      echo "  Run 'safe-step sync' to pull main into your branch, then try again."
-      exit 1
+    git commit -m "$msg" >/dev/null
+    echo "→ uploading your change..."
+    if ! git push -u origin "$branch" >/dev/null 2>&1; then
+      echo "✖ the upload was rejected. Usually that means the live app moved on while you were working."
+      echo "  Trying to refresh automatically..."
+      if "$0" sync >/dev/null 2>&1; then
+        if git push -u origin "$branch" >/dev/null 2>&1; then
+          echo "✓ recovered. Your change is uploaded."
+        else
+          echo "  Couldn't recover automatically."
+          ping_diogo
+          exit 1
+        fi
+      else
+        echo "  Couldn't auto-refresh — there's a conflict with someone else's work."
+        ping_diogo
+        exit 1
+      fi
     fi
     echo
-    echo "✓ shipped. Vercel is now building a preview."
-    echo "  Run 'safe-step preview' in ~30s to see the URL."
-    echo "  When it looks good, run 'safe-step pr' to ask for it to be merged into the live app."
-    ;;
-
-  pr)
-    branch="$(git symbolic-ref --short HEAD)"
-    if [[ "$branch" == "main" ]]; then
-      echo "✖ you're on main. PRs come from feature branches."
-      exit 1
-    fi
-    if ! command -v gh >/dev/null 2>&1; then
-      echo "✖ GitHub CLI (gh) not installed."
-      echo "  Open this URL to create the PR manually:"
-      echo "  https://github.com/thesquaredD/safestep-lisbon/pull/new/$branch"
-      exit 1
-    fi
-    title="${1:-$(git log -1 --pretty=%s)}"
-    gh pr create --title "$title" --body "Preview: $(${0} preview)" --head "$branch" --base main
+    echo "✓ shipped to a private preview URL."
+    echo "  Run 'safe-step preview' to open it (give Vercel ~30 seconds first)."
+    echo "  When it looks good, run 'safe-step merge' to make it live."
     ;;
 
   preview)
@@ -155,7 +151,7 @@ case "$cmd" in
     if [[ "$branch" == "main" ]]; then
       url="$PROD_URL"
     else
-      # Vercel's preview URL convention:
+      # Vercel's preview URL convention.
       url="https://safestep-lisbon-git-${branch}-thesquaredds-projects.vercel.app"
     fi
     echo "$url"
@@ -167,30 +163,100 @@ case "$cmd" in
     if command -v open >/dev/null 2>&1; then open "$PROD_URL"; fi
     ;;
 
+  merge)
+    branch="$(git symbolic-ref --short HEAD)"
+    if [[ "$branch" == "main" ]]; then
+      echo "✖ you're already on the live version. Nothing to merge."
+      exit 1
+    fi
+    if ! command -v gh >/dev/null 2>&1; then
+      echo "✖ GitHub CLI isn't installed. Ask Diogo to run 'bin/setup' on your laptop."
+      exit 1
+    fi
+    # Make sure the branch was shipped (push first if needed).
+    if [[ -n "$(git status --porcelain)" ]] || ! git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then
+      echo "→ shipping any unshipped changes first..."
+      "$0" ship "$(git log -1 --pretty=%s 2>/dev/null || echo 'update')" || exit 1
+    fi
+    echo "→ asking GitHub to merge your change into the live app..."
+    # Create the PR if it doesn't exist; otherwise reuse it.
+    pr_url="$(gh pr view "$branch" --json url --jq .url 2>/dev/null || true)"
+    if [[ -z "$pr_url" ]]; then
+      title="$(git log -1 --pretty=%s)"
+      pr_url="$(gh pr create --title "$title" --body "Preview: https://safestep-lisbon-git-${branch}-thesquaredds-projects.vercel.app" --head "$branch" --base main 2>&1 | grep -oE 'https://github\.com/[^ ]+' | tail -1)"
+    fi
+    if [[ -z "$pr_url" ]]; then
+      echo "✖ I couldn't create the merge request."
+      ping_diogo
+      exit 1
+    fi
+    if ! gh pr merge "$branch" --squash --delete-branch --auto >/dev/null 2>&1; then
+      # --auto fails if there are no required checks; fall back to immediate merge.
+      if ! gh pr merge "$branch" --squash --delete-branch >/dev/null 2>&1; then
+        echo "✖ GitHub refused to merge. Most likely there's a conflict with someone else's work."
+        echo "  Merge request: $pr_url"
+        ping_diogo
+        exit 1
+      fi
+    fi
+    git checkout main >/dev/null 2>&1
+    git pull --ff-only --quiet 2>/dev/null || true
+    git branch -D "$branch" >/dev/null 2>&1 || true
+    echo
+    echo "✓ merged and live (Vercel rebuilds prod in ~30 seconds)."
+    echo "  Run 'safe-step prod' to see it live."
+    ;;
+
   undo)
     branch="$(git symbolic-ref --short HEAD)"
     if [[ "$branch" == "main" ]]; then
-      echo "✖ refusing to undo on main. Make a new branch and revert there."
+      echo "✖ I can't undo on the live version directly."
+      ping_diogo
       exit 1
     fi
     last_msg="$(git log -1 --pretty=%s)"
-    echo "→ this will revert the last commit: \"$last_msg\""
-    read -r -p "  proceed? [y/N] " yn
+    echo "→ this will undo: \"$last_msg\""
+    read -r -p "  are you sure? [y/N] " yn
     case "$yn" in
       y|Y|yes) ;;
       *) echo "  cancelled."; exit 0 ;;
     esac
-    git revert --no-edit HEAD
-    git push
-    echo "✓ undone. The preview URL will redeploy without the bad change."
+    git revert --no-edit HEAD >/dev/null 2>&1
+    git push >/dev/null 2>&1
+    echo "✓ undone. Your preview URL will refresh without that change in ~30 seconds."
     ;;
 
   status)
-    echo "branch:  $(git symbolic-ref --short HEAD)"
-    echo "remote:  $(git config --get remote.origin.url)"
-    echo
-    echo "changes:"
-    git status --short || true
+    branch="$(git symbolic-ref --short HEAD)"
+    echo "workspace:  $branch"
+    if [[ "$branch" == "main" ]]; then
+      echo "            (you're on the live version — make a new workspace before changing anything)"
+    else
+      echo "            (a private workspace; safe to experiment)"
+    fi
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "unsaved changes:"
+      git status --short
+    else
+      echo "no unsaved changes."
+    fi
+    ;;
+
+  sync)
+    # Power-user / Diogo command. Not in main help.
+    branch="$(git symbolic-ref --short HEAD)"
+    if [[ "$branch" == "main" ]]; then
+      git pull --ff-only
+      echo "✓ main is up to date."
+      exit 0
+    fi
+    echo "→ pulling latest main into '$branch'..."
+    git fetch origin --quiet
+    if ! git merge --no-edit origin/main; then
+      echo "✖ merge conflict. Use git tools to resolve, then push."
+      exit 1
+    fi
+    echo "✓ '$branch' now includes the latest main."
     ;;
 
   help|--help|-h|"")
@@ -199,7 +265,7 @@ case "$cmd" in
 
   *)
     echo "✖ unknown command: $cmd"
-    echo "  run 'safe-step' to see available commands."
+    echo "  run 'safe-step' to see what you can do."
     exit 1
     ;;
 esac

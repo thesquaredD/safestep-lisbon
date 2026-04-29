@@ -128,16 +128,19 @@ If `pnpm` is missing: `npm install -g pnpm`.
 The team uses a simple `safe-step` wrapper (see `bin/safe-step`):
 
 ```bash
-safe-step new <feature-name>     # create branch from main
+safe-step new "<feature-name>"   # create branch from latest main
 # ... ask Gemini to implement ...
-safe-step ship "<short message>" # add + commit + push (triggers preview deploy)
-safe-step preview                # print preview URL
+safe-step ship "<short message>" # type-check, commit, push, get preview URL
+safe-step preview                # open preview URL
+safe-step merge                  # PR + auto-merge + delete branch + back to main
 safe-step undo                   # revert the last pushed commit
 ```
 
-You should call `pnpm build` before `safe-step ship` to catch type errors. If the build fails, fix the errors before shipping.
+`safe-step ship` runs `pnpm build` automatically and refuses to ship if it fails. **You don't need to run `pnpm build` separately** unless you're testing during development.
 
-When opening PRs: keep the title short, describe the user-visible change, and don't mention Gemini in the title (commit footer is fine).
+`safe-step merge` does everything in one go: creates the PR, squashes-and-merges, deletes the branch, switches back to main, pulls. The team never touches the GitHub web UI.
+
+When opening commit/PR titles: keep them short and user-facing. *"Add late-night sanctuary filter"* not *"Refactor SanctuaryPage filter logic"*.
 
 ---
 
