@@ -77,26 +77,47 @@ export function MapView({
   )
 
   // Fit map to the selected route (or all routes if none selected) whenever
-  // routes change. This makes the map auto-center on the new origin/destination
-  // pair when the user picks a different place.
+  // routes change. Padding is clamped to the actual map container size — on
+  // narrow viewports a hardcoded 220px bottom padding can exceed map height
+  // and MapLibre returns NaN coords (it crashes inside cameraForBounds).
   useEffect(() => {
     const m = mapRef.current?.getMap()
     if (!m || !routes || routes.length === 0) return
+    const c = m.getContainer()
+    const w = c.offsetWidth, h = c.offsetHeight
+    if (w < 100 || h < 100) return  // map not yet sized
+
     const coords = (selectedRouteId ? routes.filter(r => r.id === selectedRouteId) : routes)
       .flatMap(r => r.geometry.coordinates as [number, number][])
     if (coords.length < 2) return
     let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity
     for (const [lng, lat] of coords) {
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue
       if (lng < minLng) minLng = lng
       if (lat < minLat) minLat = lat
       if (lng > maxLng) maxLng = lng
       if (lat > maxLat) maxLat = lat
     }
-    m.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
-      padding: { top: 90, right: 80, bottom: 220, left: 80 },
-      duration: 600,
-      maxZoom: 16,
-    })
+    if (!Number.isFinite(minLng) || !Number.isFinite(maxLng)) return
+
+    // Cap padding at 25% of each axis so the camera always has room to fit.
+    const padding = {
+      top:    Math.min(90,  Math.floor(h * 0.10)),
+      right:  Math.min(80,  Math.floor(w * 0.15)),
+      bottom: Math.min(220, Math.floor(h * 0.25)),
+      left:   Math.min(80,  Math.floor(w * 0.15)),
+    }
+
+    try {
+      m.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
+        padding,
+        duration: 600,
+        maxZoom: 16,
+      })
+    } catch {
+      // Last-resort: don't crash the app if MapLibre still rejects the bounds
+      // (very small map, broken geometry). Camera just stays where it is.
+    }
   }, [routes, selectedRouteId])
 
   const sanctuariesFC = useMemo<FeatureCollection<Point>>(() => ({
