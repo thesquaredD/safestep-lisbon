@@ -91,19 +91,18 @@ function Sidebar() {
         </ul>
       </nav>
 
-      {/* Footer card — gentle copy, ties the manifesto into the chrome */}
-      <div className="px-3 pt-4">
-        <div className="rounded-xl bg-white/[0.04] border border-white/[0.06] px-3 py-3 backdrop-blur-sm">
-          <Sparkles size={14} className="text-brand-300 mb-1.5" />
-          <p className="font-display text-[13px] leading-tight text-white/95">
-            Walk like
-            <br />
-            you belong.
-          </p>
-          <p className="text-[10px] text-white/45 mt-1.5 leading-snug">
-            Share your route with a trusted contact before walking.
-          </p>
-        </div>
+      {/* Footer — minimal. The dark rail itself carries the manifesto tone;
+          a verbose card would only look squeezed in the 88px width. */}
+      <div className="pt-4 pb-2 px-3 flex flex-col items-center gap-1.5">
+        <Sparkles size={12} className="text-brand-300/80" />
+        <p
+          className="font-display text-[10px] tracking-[0.22em] uppercase text-white/40 text-center leading-[1.4]"
+          style={{ fontVariationSettings: '"opsz" 36' }}
+        >
+          Lisboa
+          <br />
+          v0.1
+        </p>
       </div>
     </aside>
   )
