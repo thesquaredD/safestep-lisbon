@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Map,
   Marker,
@@ -6,7 +6,7 @@ import {
   Layer,
   NavigationControl,
 } from 'react-map-gl/maplibre'
-import type { LayerProps } from 'react-map-gl/maplibre'
+import type { LayerProps, MapRef } from 'react-map-gl/maplibre'
 import type { FeatureCollection, Point } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
@@ -16,12 +16,12 @@ import {
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 import { useHazards, type Hazard } from '@/data/hazards'
 import {
-  ORIGIN, DESTINATION,
-  allRoutesFeature, routeFeature, ROUTE_COLORS, type RouteId,
+  DEFAULT_ORIGIN, DEFAULT_DESTINATION,
+  routesToFeatureCollection, ROUTE_COLORS,
+  type RouteId, type Route, type LngLat,
 } from '@/data/routes'
 import { MapPopup, type PopupSelection } from './MapPopup'
 
-// Free vector tiles, no API key.
 const TILES = 'https://tiles.openfreemap.org/styles/positron'
 
 const sanctuaryIconFor = (k: Sanctuary['kind']) =>
@@ -35,16 +35,27 @@ const hazardIconFor = (k: Hazard['kind']) =>
   : AlertTriangle
 
 type Props = {
-  selectedRoute?: RouteId
+  /** All routes returned by the routing engine — colored polylines on the map. */
+  routes?: Route[]
+  /** Which route to highlight; others render dim. If absent, all show colored. */
+  selectedRouteId?: RouteId
+  /** Origin marker location (defaults to the demo origin). */
+  from?: LngLat
+  /** Destination marker location (defaults to the demo destination). */
+  to?: LngLat
+  /** Hide the destination marker entirely (e.g. during free exploration). */
   showDestination?: boolean
   showControls?: boolean
-  /** Called when a marker is selected/deselected — lets the parent collapse a drawer if needed. */
+  /** Notify parent so a mobile drawer can collapse when popup opens. */
   onSelectionChange?: (hasSelection: boolean) => void
   className?: string
 }
 
 export function MapView({
-  selectedRoute,
+  routes,
+  selectedRouteId,
+  from = DEFAULT_ORIGIN,
+  to = DEFAULT_DESTINATION,
   showDestination = true,
   showControls = true,
   onSelectionChange,
@@ -53,17 +64,40 @@ export function MapView({
   const { data: sanctuaries } = useSanctuaries()
   const { data: hazards } = useHazards()
   const [selection, setSelection] = useState<PopupSelection | null>(null)
+  const mapRef = useRef<MapRef | null>(null)
 
-  // Notify the parent so the mobile drawer can collapse and give the popup room.
   const select = (s: PopupSelection | null) => {
     setSelection(s)
     onSelectionChange?.(s !== null)
   }
 
   const routesFC = useMemo(
-    () => (selectedRoute ? routeFeature(selectedRoute) : allRoutesFeature()),
-    [selectedRoute],
+    () => routesToFeatureCollection(routes ?? [], selectedRouteId),
+    [routes, selectedRouteId],
   )
+
+  // Fit map to the selected route (or all routes if none selected) whenever
+  // routes change. This makes the map auto-center on the new origin/destination
+  // pair when the user picks a different place.
+  useEffect(() => {
+    const m = mapRef.current?.getMap()
+    if (!m || !routes || routes.length === 0) return
+    const coords = (selectedRouteId ? routes.filter(r => r.id === selectedRouteId) : routes)
+      .flatMap(r => r.geometry.coordinates as [number, number][])
+    if (coords.length < 2) return
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity
+    for (const [lng, lat] of coords) {
+      if (lng < minLng) minLng = lng
+      if (lat < minLat) minLat = lat
+      if (lng > maxLng) maxLng = lng
+      if (lat > maxLat) maxLat = lat
+    }
+    m.fitBounds([[minLng, minLat], [maxLng, maxLat]], {
+      padding: { top: 90, right: 80, bottom: 220, left: 80 },
+      duration: 600,
+      maxZoom: 16,
+    })
+  }, [routes, selectedRouteId])
 
   const sanctuariesFC = useMemo<FeatureCollection<Point>>(() => ({
     type: 'FeatureCollection',
@@ -79,14 +113,11 @@ export function MapView({
   return (
     <div className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Map
+        ref={mapRef}
         initialViewState={{ longitude: -9.1381, latitude: 38.7122, zoom: 14 }}
         mapStyle={TILES}
         attributionControl={{ compact: true }}
-        scrollZoom
-        dragPan
-        dragRotate={false}
-        touchZoomRotate
-        doubleClickZoom
+        scrollZoom dragPan dragRotate={false} touchZoomRotate doubleClickZoom
         style={{ width: '100%', height: '100%' }}
         onClick={() => select(null)}
       >
@@ -94,7 +125,7 @@ export function MapView({
           <NavigationControl position="bottom-right" showCompass={false} showZoom={true} />
         )}
 
-        {/* Safety zones — soft purple halo around each sanctuary */}
+        {/* Sanctuary halos */}
         <Source id="sanctuary-zones" type="geojson" data={sanctuariesFC}>
           <Layer {...({
             id: 'sanctuary-zone-halo',
@@ -125,7 +156,8 @@ export function MapView({
           } as LayerProps)} />
         </Source>
 
-        {/* Routes (casing + line) */}
+        {/* Routes (casing + line). The line color comes from each feature's
+            `color` property — set per-route in routesToFeatureCollection. */}
         <Source id="routes" type="geojson" data={routesFC}>
           <Layer {...({
             id: 'routes-casing',
@@ -137,11 +169,11 @@ export function MapView({
             id: 'routes',
             type: 'line',
             paint: {
-              'line-color': selectedRoute
-                ? ROUTE_COLORS[selectedRoute]
+              'line-color': selectedRouteId
+                ? ROUTE_COLORS[selectedRouteId]
                 : ['coalesce', ['get', 'color'], '#7c3aed'],
               'line-width': 4,
-              'line-opacity': selectedRoute ? 1 : 0.85,
+              'line-opacity': selectedRouteId ? 1 : 0.85,
             },
             layout: { 'line-cap': 'round', 'line-join': 'round' },
           } as LayerProps)} />
@@ -149,15 +181,13 @@ export function MapView({
 
         {/* Origin pin */}
         <Marker
-          longitude={ORIGIN.lng}
-          latitude={ORIGIN.lat}
-          anchor="bottom"
-          onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'origin' }) }}
+          longitude={from.lng} latitude={from.lat} anchor="bottom"
+          onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'origin', from }) }}
         >
           <button
             type="button"
             className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-full transition hover:scale-105 active:scale-95"
-            aria-label="Home"
+            aria-label={from.label ?? 'Start'}
           >
             <TeardropPin color="#7c3aed" />
           </button>
@@ -166,31 +196,26 @@ export function MapView({
         {/* Destination pin */}
         {showDestination && (
           <Marker
-            longitude={DESTINATION.lng}
-            latitude={DESTINATION.lat}
-            anchor="bottom"
-            onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'destination' }) }}
+            longitude={to.lng} latitude={to.lat} anchor="bottom"
+            onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'destination', to }) }}
           >
             <button
               type="button"
               className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-risk rounded-full transition hover:scale-105 active:scale-95"
-              aria-label="Destination"
+              aria-label={to.label ?? 'Destination'}
             >
               <TeardropPin color="#ef4444" />
             </button>
           </Marker>
         )}
 
-        {/* Sanctuary tiles */}
         {sanctuaries?.map(s => {
           if (s.lat == null || s.lng == null) return null
           const Icon = sanctuaryIconFor(s.kind!)
           return (
             <Marker
               key={s.id}
-              longitude={s.lng}
-              latitude={s.lat}
-              anchor="center"
+              longitude={s.lng} latitude={s.lat} anchor="center"
               onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'sanctuary', data: s }) }}
             >
               <button
@@ -204,7 +229,6 @@ export function MapView({
           )
         })}
 
-        {/* Hazard markers */}
         {hazards?.map(h => {
           if (h.lat == null || h.lng == null) return null
           const Icon = hazardIconFor(h.kind)
@@ -212,9 +236,7 @@ export function MapView({
           return (
             <Marker
               key={h.id}
-              longitude={h.lng}
-              latitude={h.lat}
-              anchor="center"
+              longitude={h.lng} latitude={h.lat} anchor="center"
               onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'hazard', data: h }) }}
             >
               <button

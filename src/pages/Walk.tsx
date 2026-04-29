@@ -1,8 +1,10 @@
 import { Link } from 'react-router'
 import { ChevronLeft, MapPinned, Lightbulb, Footprints, Store, CheckCircle2, RotateCcw } from 'lucide-react'
 import { MapView } from '@/components/MapView'
+import { useRoutes, DEFAULT_ORIGIN, DEFAULT_DESTINATION } from '@/data/routes'
 
 export function WalkPage() {
+  const { data: routes } = useRoutes(DEFAULT_ORIGIN, DEFAULT_DESTINATION)
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200 bg-white">
@@ -21,7 +23,7 @@ export function WalkPage() {
       </div>
 
       <div className="flex-1 relative">
-        <MapView selectedRoute="safest" />
+        <MapView routes={routes ?? []} selectedRouteId="safest" />
       </div>
 
       <div className="grid grid-cols-2 gap-2 p-3 border-t border-neutral-200 bg-white">

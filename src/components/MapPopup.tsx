@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import type { Sanctuary } from '@/data/sanctuaries'
 import type { Hazard } from '@/data/hazards'
-import { ORIGIN, DESTINATION } from '@/data/routes'
+import { DEFAULT_ORIGIN, DEFAULT_DESTINATION, type LngLat } from '@/data/routes'
 
 /* ─────────────────────────────────────────────────────────────────────────
    The popup is the screenshot moment for this app. We hide every default
@@ -14,8 +14,8 @@ import { ORIGIN, DESTINATION } from '@/data/routes'
    ───────────────────────────────────────────────────────────────────────── */
 
 export type PopupSelection =
-  | { kind: 'origin' }
-  | { kind: 'destination' }
+  | { kind: 'origin'; from?: LngLat }
+  | { kind: 'destination'; to?: LngLat }
   | { kind: 'sanctuary'; data: Sanctuary }
   | { kind: 'hazard'; data: Hazard }
 
@@ -154,25 +154,28 @@ type View = {
 
 function renderable(sel: PopupSelection): View | null {
   if (sel.kind === 'origin') {
+    const f = sel.from ?? DEFAULT_ORIGIN
+    const cleaned = (f.label ?? '').replace(/^Home — /, '')
     return {
-      lng: ORIGIN.lng, lat: ORIGIN.lat, offset: 30,
+      lng: f.lng, lat: f.lat, offset: 30,
       icon: HomeIcon,
       chipBg: 'bg-gradient-to-br from-brand-500 to-brand-700',
       accent: '#7c3aed',
-      title: 'Home',
-      eyebrow: 'Starting point',
-      address: ORIGIN.label.replace(/^Home — /, ''),
+      title: 'Start',
+      eyebrow: 'Origin',
+      address: cleaned || `${f.lat.toFixed(5)}, ${f.lng.toFixed(5)}`,
     }
   }
   if (sel.kind === 'destination') {
+    const t = sel.to ?? DEFAULT_DESTINATION
     return {
-      lng: DESTINATION.lng, lat: DESTINATION.lat, offset: 30,
+      lng: t.lng, lat: t.lat, offset: 30,
       icon: Flag,
       chipBg: 'bg-gradient-to-br from-rose-500 to-red-600',
       accent: '#ef4444',
       title: 'Destination',
       eyebrow: 'Where you’re going',
-      address: DESTINATION.label,
+      address: t.label ?? `${t.lat.toFixed(5)}, ${t.lng.toFixed(5)}`,
     }
   }
   if (sel.kind === 'sanctuary') {
