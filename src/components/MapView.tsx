@@ -5,7 +5,6 @@ import {
   Source,
   Layer,
   NavigationControl,
-  FullscreenControl,
 } from 'react-map-gl/maplibre'
 import type { LayerProps } from 'react-map-gl/maplibre'
 import type { FeatureCollection, Point } from 'geojson'
@@ -78,10 +77,7 @@ export function MapView({
         style={{ width: '100%', height: '100%' }}
       >
         {showControls && (
-          <>
-            <NavigationControl position="top-right" showCompass={false} showZoom={true} />
-            <FullscreenControl position="top-right" />
-          </>
+          <NavigationControl position="bottom-right" showCompass={false} showZoom={true} />
         )}
 
         {/* Safety zones — soft purple halo around each sanctuary, behind everything */}
