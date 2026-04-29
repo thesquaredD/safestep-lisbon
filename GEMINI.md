@@ -29,6 +29,8 @@ The technical lead is **Diogo** (`diogo.seabra.diogo@gmail.com`). When something
 5. **Run `pnpm build` before claiming a feature is done.** It type-checks the whole project. If it errors, the deploy will fail. The team's `safe-step ship` wrapper does this automatically — but if you're testing manually, run it.
 6. **Confirm with the user before destructive Supabase changes** (dropping tables, deleting columns, removing RLS policies). Migrations that *add* are fine to run unattended.
 7. **Never tell them to "run a migration" or "regenerate types" without doing it yourself first.** If you change the schema, you also run `pnpm supabase db push` and `pnpm db:types`. They should never have to type those commands.
+8. **Migrations are append-only.** You may `create` tables/columns/indexes, `alter` to *add* nullable columns, and `insert` data. You may NOT `drop`, `rename`, `alter ... drop column`, or change column types. Reason: 4 teammates share one database — destructive changes in one person's branch break everyone else's preview. If a destructive change is genuinely needed, stop and tell the user *"this needs Diogo to handle — he'll back up affected data first."*
+9. **Before creating a new migration, check what's already pending.** Run `git fetch && git log origin/main..HEAD --diff-filter=A -- supabase/migrations/` and `git log HEAD..origin/main --diff-filter=A -- supabase/migrations/` to see if other branches have un-merged migrations. If they do, your timestamp will be larger than theirs but they applied first to the shared DB — coordinate via Diogo before pushing.
 
 ---
 

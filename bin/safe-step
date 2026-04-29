@@ -8,13 +8,15 @@
 #   - rolling back
 #
 # Usage:
-#   safe-step new <branch-name>     create a new branch from main
-#   safe-step ai                    open Gemini CLI in this project
-#   safe-step ship "<message>"      add + commit + push (triggers preview deploy)
-#   safe-step preview               print the latest preview URL
-#   safe-step undo                  revert the last commit you pushed
-#   safe-step status                show what's changed and what branch you're on
-#   safe-step prod                  open the production URL
+#   safe-step new "<feature description>"   start a new isolated change
+#   safe-step ai                             open Gemini CLI in this project
+#   safe-step ship "<message>"               add + commit + push (preview URL)
+#   safe-step sync                           pull latest main into your branch
+#   safe-step preview                        open the preview URL
+#   safe-step pr ["<title>"]                 open a PR to merge into the live app
+#   safe-step undo                           revert the last commit you pushed
+#   safe-step status                         what's changed, what branch you're on
+#   safe-step prod                           open the production URL
 #
 # Run from anywhere in the project. No options, no flags.
 
@@ -50,10 +52,42 @@ case "$cmd" in
       echo "✖ couldn't make a branch name from \"$name\""
       exit 1
     fi
+    echo "→ fetching latest from GitHub..."
+    git fetch origin --quiet
+    if git rev-parse --verify --quiet "refs/heads/$branch" >/dev/null \
+       || git rev-parse --verify --quiet "refs/remotes/origin/$branch" >/dev/null; then
+      echo "✖ a branch called '$branch' already exists (yours or someone else's)."
+      echo "  Try a different description, or 'git checkout $branch' to continue that work."
+      exit 1
+    fi
     git checkout main
     git pull --ff-only
     git checkout -b "$branch"
+    # Warn if there are uncommitted changes hanging around from a previous session.
+    if [[ -n "$(git status --porcelain)" ]]; then
+      echo "ℹ note: you have uncommitted changes carried over from before. They're now on this branch."
+    fi
     echo "✓ on branch '$branch'. Now ask Gemini what you want to build."
+    ;;
+
+  sync)
+    branch="$(git symbolic-ref --short HEAD)"
+    if [[ "$branch" == "main" ]]; then
+      git pull --ff-only
+      echo "✓ main is up to date."
+      exit 0
+    fi
+    echo "→ pulling latest main and merging into '$branch'..."
+    git fetch origin --quiet
+    if ! git merge --no-edit origin/main; then
+      echo
+      echo "✖ merge conflict — someone else changed the same lines you did."
+      echo "  Don't panic. Run 'safe-step ai' and tell Gemini:"
+      echo "    \"there's a merge conflict — help me resolve it\""
+      echo "  If Gemini can't sort it out, send the output of 'git status' to Diogo."
+      exit 1
+    fi
+    echo "✓ '$branch' now includes the latest main."
     ;;
 
   ai)
@@ -88,10 +122,32 @@ case "$cmd" in
     fi
     git commit -m "$msg"
     echo "→ pushing to GitHub..."
-    git push -u origin "$branch"
+    if ! git push -u origin "$branch" 2>&1; then
+      echo
+      echo "✖ push rejected. Usually this means main has moved since you started."
+      echo "  Run 'safe-step sync' to pull main into your branch, then try again."
+      exit 1
+    fi
     echo
     echo "✓ shipped. Vercel is now building a preview."
     echo "  Run 'safe-step preview' in ~30s to see the URL."
+    echo "  When it looks good, run 'safe-step pr' to ask for it to be merged into the live app."
+    ;;
+
+  pr)
+    branch="$(git symbolic-ref --short HEAD)"
+    if [[ "$branch" == "main" ]]; then
+      echo "✖ you're on main. PRs come from feature branches."
+      exit 1
+    fi
+    if ! command -v gh >/dev/null 2>&1; then
+      echo "✖ GitHub CLI (gh) not installed."
+      echo "  Open this URL to create the PR manually:"
+      echo "  https://github.com/thesquaredD/safestep-lisbon/pull/new/$branch"
+      exit 1
+    fi
+    title="${1:-$(git log -1 --pretty=%s)}"
+    gh pr create --title "$title" --body "Preview: $(${0} preview)" --head "$branch" --base main
     ;;
 
   preview)

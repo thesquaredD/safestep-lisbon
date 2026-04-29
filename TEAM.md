@@ -88,7 +88,9 @@ Opens your private preview URL. Click around the app, test on your phone (the UR
 | `safe-step new "<description>"` | Start a new isolated change |
 | `safe-step ai` | Open Gemini to describe what you want |
 | `safe-step ship "<message>"` | Save your change and create a preview |
+| `safe-step sync` | Pull the latest live version into your branch |
 | `safe-step preview` | Open your preview URL in the browser |
+| `safe-step pr` | Open a PR to merge your change into the live app |
 | `safe-step prod` | Open the live app |
 | `safe-step undo` | Revert the last change you shipped |
 | `safe-step status` | What did I change? What branch am I on? |
@@ -114,10 +116,21 @@ Opens your private preview URL. Click around the app, test on your phone (the UR
 2. Then ask Gemini *what went wrong* by describing the symptom.
 3. If you're really stuck, message Diogo with the preview URL and a screenshot.
 
+### Working in parallel — what to do when conflicts happen
+
+You're four people on one project. About 90% of the time there's no overlap. The other 10% you might see one of these:
+
+- **"push rejected"** when you `safe-step ship` — someone else's change reached `main` after you started. Run `safe-step sync` and try again.
+- **"merge conflict"** — you and a teammate edited the same lines. Run `safe-step ai` and tell Gemini *"there's a merge conflict — help me resolve it"*. It can handle simple cases. For tricky ones, ping Diogo.
+- **"that data isn't there"** — someone may have re-seeded the database from another branch. Ping Diogo before re-adding things; he might have a backup.
+
+Whenever you're not sure what's going on, **stop, take a screenshot, message Diogo**. You won't break anything by stopping. You might break something by guessing.
+
 ### Don't do
 - **Don't run `safe-step ship` while on `main`.** The wrapper will block you, but seriously — `main` is what's live, you don't want to push there directly.
 - **Don't share the URL `https://safestep-lisbon-…vercel.app/` with anyone if your preview is half-broken.** Previews are private but the URL is shareable.
 - **Don't edit the file `src/lib/database.types.ts`** by hand. It's auto-generated. If Gemini suggests editing it manually, tell it to run `pnpm db:types` instead.
+- **Don't ask Gemini to "delete a column" or "drop a table" or "remove a feature from the database".** Those are destructive and the database is shared with three teammates — your delete erases their stuff too. Adding things is fine. Removing things needs Diogo.
 
 ---
 

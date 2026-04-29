@@ -12,3 +12,4 @@ Recipes describe **what files to touch**, **the order of operations**, and **the
 | [edit-copy.md](./edit-copy.md) | Change wording, labels, error messages |
 | [change-route-weights.md](./change-route-weights.md) | Tune the safety scoring sliders' defaults / behavior |
 | [wire-real-routing.md](./wire-real-routing.md) | Replace the demo polylines with real OSRM/ORS routing |
+| [conflict-survival.md](./conflict-survival.md) | When push rejected, merge conflicts, migration ordering, lost data |
