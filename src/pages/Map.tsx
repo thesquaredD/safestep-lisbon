@@ -16,21 +16,21 @@ export function MapPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
-      <div className="px-4 pt-3">
-        <div className="flex items-center gap-2 bg-white rounded-full border border-neutral-200 px-4 py-2.5">
-          <Search size={16} className="text-neutral-500" />
-          <span className="text-sm flex-1 truncate">Home — Rua de São José, Lisboa</span>
-          <span className="text-xs flex items-center gap-1 text-neutral-600">📋 Legend</span>
+      {/* Search overlay sits ON the map */}
+      <div className="relative flex-1 min-h-[300px]">
+        <MapView selectedRoute={open} />
+        <div className="absolute top-3 inset-x-3 z-10">
+          <div className="flex items-center gap-2 bg-white/95 backdrop-blur rounded-full border border-neutral-200 px-4 py-2.5 shadow-sm">
+            <Search size={16} className="text-neutral-500" />
+            <span className="text-sm flex-1 truncate">Home — Rua de São José, Lisboa</span>
+            <span className="text-xs flex items-center gap-1 text-neutral-600 shrink-0">📋 Legend</span>
+          </div>
         </div>
       </div>
 
-      <div className="mx-4 mt-3 h-56 rounded-2xl overflow-hidden border border-neutral-200">
-        <MapView selectedRoute={open} />
-      </div>
-
-      {/* Route options */}
-      <div className="m-4 mt-3 rounded-2xl bg-white border border-neutral-200 p-4">
+      {/* Route options drawer at the bottom */}
+      <div className="rounded-t-3xl bg-white border-t border-neutral-200 p-4 -mt-4 relative z-10 shadow-[0_-4px_20px_-8px_rgba(0,0,0,0.1)]">
+        <div className="w-10 h-1 bg-neutral-300 rounded-full mx-auto mb-3" aria-hidden="true" />
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-semibold">Route Options</h2>
           <span className="text-xs text-neutral-500">Lisboa</span>
