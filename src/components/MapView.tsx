@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Map,
   Marker,
+  Popup,
   Source,
   Layer,
   NavigationControl,
@@ -27,12 +28,19 @@ const hazardIconFor = (k: Hazard['kind']) =>
   : k === 'unsafe_crossing' ? AlertCircle
   : AlertTriangle
 
+type Selection =
+  | { kind: 'origin' }
+  | { kind: 'destination' }
+  | { kind: 'sanctuary'; data: Sanctuary }
+  | { kind: 'hazard'; data: Hazard }
+  | null
+
 type Props = {
   /** When set, only this route is drawn (used in active-walk view). */
   selectedRoute?: RouteId
   /** When false, hide the destination marker (e.g., browsing mode). */
   showDestination?: boolean
-  /** When false, hide the on-map nav + fullscreen controls (small previews). */
+  /** When false, hide the on-map nav controls (small previews). */
   showControls?: boolean
   className?: string
 }
@@ -45,6 +53,7 @@ export function MapView({
 }: Props) {
   const { data: sanctuaries } = useSanctuaries()
   const { data: hazards } = useHazards()
+  const [selection, setSelection] = useState<Selection>(null)
 
   const routesFC = useMemo(
     () => (selectedRoute ? routeFeature(selectedRoute) : allRoutesFeature()),
@@ -75,25 +84,21 @@ export function MapView({
         touchZoomRotate
         doubleClickZoom
         style={{ width: '100%', height: '100%' }}
+        onClick={() => setSelection(null)}
       >
         {showControls && (
           <NavigationControl position="bottom-right" showCompass={false} showZoom={true} />
         )}
 
-        {/* Safety zones — soft purple halo around each sanctuary, behind everything */}
+        {/* Safety zones — soft purple halo around each sanctuary */}
         <Source id="sanctuary-zones" type="geojson" data={sanctuariesFC}>
           <Layer {...({
             id: 'sanctuary-zone-halo',
             type: 'circle',
             paint: {
-              // Zoom-dependent radius in pixels; matches a roughly constant ~80m on the ground.
               'circle-radius': [
                 'interpolate', ['linear'], ['zoom'],
-                10, 6,
-                13, 22,
-                15, 55,
-                17, 130,
-                19, 280,
+                10, 6, 13, 22, 15, 55, 17, 130, 19, 280,
               ],
               'circle-color': '#7c3aed',
               'circle-opacity': 0.12,
@@ -106,11 +111,7 @@ export function MapView({
             paint: {
               'circle-radius': [
                 'interpolate', ['linear'], ['zoom'],
-                10, 6,
-                13, 22,
-                15, 55,
-                17, 130,
-                19, 280,
+                10, 6, 13, 22, 15, 55, 17, 130, 19, 280,
               ],
               'circle-color': 'transparent',
               'circle-stroke-color': '#7c3aed',
@@ -142,51 +143,162 @@ export function MapView({
           } as LayerProps)} />
         </Source>
 
-        {/* Origin (purple teardrop) */}
-        <Marker longitude={ORIGIN.lng} latitude={ORIGIN.lat} anchor="bottom">
-          <TeardropPin color="#7c3aed" />
+        {/* Origin pin */}
+        <Marker
+          longitude={ORIGIN.lng}
+          latitude={ORIGIN.lat}
+          anchor="bottom"
+          onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'origin' }) }}
+        >
+          <button
+            type="button"
+            className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-full"
+            aria-label="Home"
+          >
+            <TeardropPin color="#7c3aed" />
+          </button>
         </Marker>
 
-        {/* Destination (red teardrop) */}
+        {/* Destination pin */}
         {showDestination && (
-          <Marker longitude={DESTINATION.lng} latitude={DESTINATION.lat} anchor="bottom">
-            <TeardropPin color="#ef4444" />
+          <Marker
+            longitude={DESTINATION.lng}
+            latitude={DESTINATION.lat}
+            anchor="bottom"
+            onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'destination' }) }}
+          >
+            <button
+              type="button"
+              className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-risk rounded-full"
+              aria-label="Destination"
+            >
+              <TeardropPin color="#ef4444" />
+            </button>
           </Marker>
         )}
 
-        {/* Sanctuary tiles — purple rounded square w/ white icon */}
+        {/* Sanctuary tiles */}
         {sanctuaries?.map(s => {
           if (s.lat == null || s.lng == null) return null
           const Icon = sanctuaryIconFor(s.kind!)
           return (
-            <Marker key={s.id} longitude={s.lng} latitude={s.lat} anchor="center">
-              <span
-                title={s.name ?? undefined}
-                className="block w-9 h-9 rounded-xl bg-brand-500 grid place-items-center text-white shadow-md ring-2 ring-white"
+            <Marker
+              key={s.id}
+              longitude={s.lng}
+              latitude={s.lat}
+              anchor="center"
+              onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'sanctuary', data: s }) }}
+            >
+              <button
+                type="button"
+                aria-label={s.name ?? 'Sanctuary'}
+                className="cursor-pointer block w-9 h-9 rounded-xl bg-brand-500 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300"
               >
                 <Icon size={18} />
-              </span>
+              </button>
             </Marker>
           )
         })}
 
-        {/* Hazard markers — amber/green warning circle */}
+        {/* Hazard markers */}
         {hazards?.map(h => {
           if (h.lat == null || h.lng == null) return null
           const Icon = hazardIconFor(h.kind)
-          const tone = h.status === 'resolved' ? 'bg-safe' : h.status === 'verified' ? 'bg-warn' : 'bg-warn'
+          const tone = h.status === 'resolved' ? 'bg-safe' : 'bg-warn'
           return (
-            <Marker key={h.id} longitude={h.lng} latitude={h.lat} anchor="center">
-              <span
-                title={h.title ?? undefined}
-                className={`block w-7 h-7 rounded-full ${tone} grid place-items-center text-white shadow-md ring-2 ring-white`}
+            <Marker
+              key={h.id}
+              longitude={h.lng}
+              latitude={h.lat}
+              anchor="center"
+              onClick={(e) => { e.originalEvent.stopPropagation(); setSelection({ kind: 'hazard', data: h }) }}
+            >
+              <button
+                type="button"
+                aria-label={h.title ?? 'Hazard'}
+                className={`cursor-pointer block w-7 h-7 rounded-full ${tone} grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300`}
               >
                 <Icon size={13} />
-              </span>
+              </button>
             </Marker>
           )
         })}
+
+        {/* Single popup for whatever's currently selected */}
+        {selection && <SelectionPopup selection={selection} onClose={() => setSelection(null)} />}
       </Map>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function SelectionPopup({ selection, onClose }: { selection: Selection; onClose: () => void }) {
+  if (!selection) return null
+
+  if (selection.kind === 'origin') {
+    return (
+      <Popup longitude={ORIGIN.lng} latitude={ORIGIN.lat} anchor="bottom" offset={28} onClose={onClose} closeOnClick={false} closeButton>
+        <PopupCard title="Home" subtitle={ORIGIN.label.replace(/^Home — /, '')} />
+      </Popup>
+    )
+  }
+  if (selection.kind === 'destination') {
+    return (
+      <Popup longitude={DESTINATION.lng} latitude={DESTINATION.lat} anchor="bottom" offset={28} onClose={onClose} closeOnClick={false} closeButton>
+        <PopupCard title="Destination" subtitle={DESTINATION.label} />
+      </Popup>
+    )
+  }
+  if (selection.kind === 'sanctuary') {
+    const s = selection.data
+    if (s.lat == null || s.lng == null) return null
+    return (
+      <Popup longitude={s.lng} latitude={s.lat} anchor="bottom" offset={20} onClose={onClose} closeOnClick={false} closeButton>
+        <PopupCard
+          title={s.name ?? 'Sanctuary'}
+          subtitle={s.address ?? undefined}
+          body={s.description ?? undefined}
+          tag={s.is_open_now ? 'Open now' : 'Closed'}
+          tagTone={s.is_open_now ? 'safe' : 'neutral'}
+        />
+      </Popup>
+    )
+  }
+  // hazard
+  const h = selection.data
+  if (h.lat == null || h.lng == null) return null
+  return (
+    <Popup longitude={h.lng} latitude={h.lat} anchor="bottom" offset={18} onClose={onClose} closeOnClick={false} closeButton>
+      <PopupCard
+        title={h.title ?? 'Hazard'}
+        subtitle={h.description ?? undefined}
+        tag={h.status ?? undefined}
+        tagTone={h.status === 'resolved' ? 'safe' : h.status === 'verified' ? 'warn' : 'warn'}
+      />
+    </Popup>
+  )
+}
+
+function PopupCard({
+  title, subtitle, body, tag, tagTone = 'neutral',
+}: {
+  title: string; subtitle?: string; body?: string;
+  tag?: string; tagTone?: 'safe' | 'warn' | 'risk' | 'neutral'
+}) {
+  const tagBg =
+    tagTone === 'safe' ? 'bg-emerald-100 text-emerald-800'
+    : tagTone === 'warn' ? 'bg-amber-100 text-amber-800'
+    : tagTone === 'risk' ? 'bg-red-100 text-red-800'
+    : 'bg-neutral-100 text-neutral-700'
+  return (
+    <div className="px-1 pb-1 max-w-[200px]">
+      <div className="flex items-start justify-between gap-2 mb-0.5">
+        <p className="font-semibold text-sm leading-tight">{title}</p>
+        {tag && <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-full shrink-0 ${tagBg}`}>{tag}</span>}
+      </div>
+      {subtitle && <p className="text-xs text-neutral-500 leading-snug">{subtitle}</p>}
+      {body && <p className="text-xs text-neutral-700 mt-1 leading-snug line-clamp-3">{body}</p>}
     </div>
   )
 }
