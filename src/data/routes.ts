@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from 'react'
 import type { FeatureCollection, LineString } from 'geojson'
+import { supabase } from '@/lib/supabase'
 
 export type RouteId = 'safest' | 'balanced' | 'fastest'
 
@@ -28,10 +29,6 @@ export type Route = {
   geometry: LineString
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Defaults — used when the user hasn't yet picked an origin/destination.
-   ─────────────────────────────────────────────────────────────────────── */
-
 export const DEFAULT_ORIGIN: LngLat = {
   lng: -9.1396, lat: 38.7165, label: 'Home — Rua de São José, Lisboa',
 }
@@ -39,7 +36,6 @@ export const DEFAULT_DESTINATION: LngLat = {
   lng: -9.1366, lat: 38.7079, label: 'Praça do Comércio, Lisboa',
 }
 
-// Backwards-compat aliases (older imports).
 export const ORIGIN = DEFAULT_ORIGIN
 export const DESTINATION = DEFAULT_DESTINATION
 
@@ -49,9 +45,72 @@ export const ROUTE_COLORS: Record<RouteId, string> = {
   fastest:  '#ef4444',
 }
 
-const PLACEHOLDER_SCORE: Record<RouteId, number> = { safest: 92, balanced: 76, fastest: 54 }
 const TONES: Record<RouteId, 'safe' | 'warn' | 'risk'> = { safest: 'safe', balanced: 'warn', fastest: 'risk' }
 const LABELS: Record<RouteId, string> = { safest: 'Safest', balanced: 'Balanced', fastest: 'Fastest' }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Utility Functions
+   ─────────────────────────────────────────────────────────────────────── */
+
+function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return Math.round(2 * R * Math.asin(Math.sqrt(x)))
+}
+
+async function fetchSafetyData() {
+  const [sanctuaries, hazards] = await Promise.all([
+    supabase.from('sanctuary_spaces_geo').select('*'),
+    supabase.from('hazard_reports_geo').select('*'),
+  ])
+  return {
+    sanctuaries: sanctuaries.data ?? [],
+    hazards: hazards.data ?? [],
+  }
+}
+
+function calculateSafetyScore(
+  geometry: LineString,
+  sanctuaries: any[],
+  hazards: any[],
+): number {
+  let baseScore = 60
+  const nearbySanctuaryIds = new Set<string>()
+  const nearbyHazardIds = new Set<string>()
+
+  // Optimization: only check points every ~20 meters or so? 
+  // For now, let's just check the nodes. OSRM full overview is dense.
+  const points = geometry.coordinates
+
+  for (const [lng, lat] of points) {
+    // Check Sanctuaries
+    for (const s of sanctuaries) {
+      if (s.lat && s.lng && !nearbySanctuaryIds.has(s.id)) {
+        if (distanceMeters(lat, lng, s.lat, s.lng) <= 80) { // 80m radius as per legend
+          nearbySanctuaryIds.add(s.id)
+          baseScore += s.is_open_now ? 15 : 10
+        }
+      }
+    }
+
+    // Check Hazards
+    for (const h of hazards) {
+      if (h.lat && h.lng && !nearbyHazardIds.has(h.id)) {
+        if (distanceMeters(lat, lng, h.lat, h.lng) <= 50) {
+          nearbyHazardIds.add(h.id)
+          baseScore -= 25
+        }
+      }
+    }
+  }
+
+  return Math.min(100, Math.max(0, baseScore))
+}
 
 /* ─────────────────────────────────────────────────────────────────────────
    Hook — fetches routes whenever from/to change.
@@ -62,7 +121,6 @@ type State = { data: Route[] | null; loading: boolean; error: string | null }
 export function useRoutes(from: LngLat | null, to: LngLat | null): State {
   const [state, setState] = useState<State>({ data: null, loading: false, error: null })
 
-  // Stable cache key — undefined inputs short-circuit
   const fromKey = from ? `${from.lng},${from.lat}` : ''
   const toKey   = to   ? `${to.lng},${to.lat}`     : ''
 
@@ -70,17 +128,54 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
     if (!from || !to) { setState({ data: null, loading: false, error: null }); return }
     let cancelled = false
     setState(s => ({ ...s, loading: true, error: null }))
-    fetchOsrm(from, to)
-      .then(routes => { if (!cancelled) setState({ data: routes, loading: false, error: null }) })
-      .catch(err => { if (!cancelled) setState({ data: null, loading: false, error: err.message ?? 'Routing failed' }) })
+    
+    Promise.all([fetchOsrm(from, to), fetchSafetyData()])
+      .then(([routes, data]) => {
+        if (cancelled) return
+
+        // Calculate real safety scores
+        const scoredRoutes = routes.map(r => ({
+          ...r,
+          score: calculateSafetyScore(r.geometry, data.sanctuaries, data.hazards),
+        }))
+
+        // Sort by safety score (highest first) to re-assign labels
+        const sortedBySafety = [...scoredRoutes].sort((a, b) => b.score - a.score)
+        
+        const finalRoutes: Route[] = sortedBySafety.map((r, i) => {
+          const id = i === 0 ? 'safest' : i === 1 ? 'balanced' : 'fastest'
+          // Standard walking speed: 4.8 km/h
+          // minutes = distanceKm / 4.8 * 60
+          const calcMinutes = Math.max(1, Math.round((r.km / 4.8) * 60))
+          
+          return {
+            ...r,
+            id,
+            label: LABELS[id],
+            tone: TONES[id],
+            minutes: calcMinutes,
+          }
+        })
+
+        // Sort back to standard Safest -> Balanced -> Fastest display order
+        const displayOrder: Record<RouteId, number> = { safest: 0, balanced: 1, fastest: 2 }
+        setState({ 
+          data: finalRoutes.sort((a, b) => displayOrder[a.id] - displayOrder[b.id]), 
+          loading: false, 
+          error: null 
+        })
+      })
+      .catch(err => { 
+        if (!cancelled) setState({ data: null, loading: false, error: err.message ?? 'Routing failed' }) 
+      })
+
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromKey, toKey])
 
   return state
 }
 
-async function fetchOsrm(from: LngLat, to: LngLat): Promise<Route[]> {
+async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | 'label' | 'tone'>[]> {
   const url =
     `https://router.project-osrm.org/route/v1/foot/` +
     `${from.lng},${from.lat};${to.lng},${to.lat}` +
@@ -93,35 +188,16 @@ async function fetchOsrm(from: LngLat, to: LngLat): Promise<Route[]> {
 
   const raw = (json.routes ?? []) as Array<{
     geometry: LineString
-    duration: number   // seconds
-    distance: number   // metres
+    duration: number
+    distance: number
   }>
-  if (raw.length === 0) throw new Error('No route found')
-
-  // Sort ascending by duration, then map: shortest = fastest, longest = safest.
-  // (Pure proxy until the team plugs in real scoring.)
-  const ordered = raw.slice().sort((a, b) => a.duration - b.duration)
-  const idsByPosition: RouteId[] =
-    ordered.length === 1 ? ['safest']
-    : ordered.length === 2 ? ['fastest', 'safest']
-    : ['fastest', 'balanced', 'safest']
-
-  const built: Route[] = ordered.map((r, i) => {
-    const id = idsByPosition[i]
-    return {
-      id,
-      label: LABELS[id],
-      score: PLACEHOLDER_SCORE[id],
-      minutes: Math.max(1, Math.round(r.duration / 60)),
-      km: Math.round(r.distance / 100) / 10,  // 1.42 → "1.4"
-      tone: TONES[id],
-      geometry: r.geometry,
-    }
-  })
-
-  // Final display order: Safest → Balanced → Fastest.
-  const order: Record<RouteId, number> = { safest: 0, balanced: 1, fastest: 2 }
-  return built.sort((a, b) => order[a.id] - order[b.id])
+  
+  return raw.map(r => ({
+    score: 0, // Placeholder, will be calculated
+    minutes: Math.max(1, Math.round(r.duration / 60)),
+    km: Math.round(r.distance / 100) / 10,
+    geometry: r.geometry,
+  }))
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -144,3 +220,4 @@ export function routesToFeatureCollection(
     })),
   }
 }
+
