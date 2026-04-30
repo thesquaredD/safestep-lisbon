@@ -144,11 +144,16 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
         
         const finalRoutes: Route[] = sortedBySafety.map((r, i) => {
           const id = i === 0 ? 'safest' : i === 1 ? 'balanced' : 'fastest'
+          // Standard walking speed: 4.8 km/h
+          // minutes = distanceKm / 4.8 * 60
+          const calcMinutes = Math.max(1, Math.round((r.km / 4.8) * 60))
+          
           return {
             ...r,
             id,
             label: LABELS[id],
             tone: TONES[id],
+            minutes: calcMinutes,
           }
         })
 

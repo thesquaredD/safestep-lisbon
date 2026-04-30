@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 export function Header() {
   return (
     <header className="flex items-center justify-center gap-2 py-3 border-b border-neutral-200 bg-white">
-      <Link to="/map" className="flex items-center gap-1.5">
+      <Link to="/" className="flex items-center gap-1.5">
         <Logo />
         <span className="font-bold text-brand-600 tracking-tight text-lg">AFESTEP</span>
       </Link>

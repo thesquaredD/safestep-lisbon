@@ -12,11 +12,11 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   Coffee, Cross, Beer, Store,
   AlertTriangle, Lightbulb, Construction, Eye, AlertCircle,
+  Navigation, MapPin as MapPinIcon,
 } from 'lucide-react'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 import { useHazards, type Hazard } from '@/data/hazards'
 import {
-  DEFAULT_ORIGIN, DEFAULT_DESTINATION,
   routesToFeatureCollection, ROUTE_COLORS,
   type RouteId, type Route, type LngLat,
 } from '@/data/routes'
@@ -40,25 +40,27 @@ type Props = {
   /** Which route to highlight; others render dim. If absent, all show colored. */
   selectedRouteId?: RouteId
   /** Origin marker location (defaults to the demo origin). */
-  from?: LngLat
+  from?: LngLat | null
   /** Destination marker location (defaults to the demo destination). */
-  to?: LngLat
+  to?: LngLat | null
   /** Hide the destination marker entirely (e.g. during free exploration). */
   showDestination?: boolean
   showControls?: boolean
   /** Notify parent so a mobile drawer can collapse when popup opens. */
   onSelectionChange?: (hasSelection: boolean) => void
+  onGetDirections?: (lat: number, lng: number, label: string) => void
   className?: string
 }
 
 export function MapView({
   routes,
   selectedRouteId,
-  from = DEFAULT_ORIGIN,
-  to = DEFAULT_DESTINATION,
+  from,
+  to,
   showDestination = true,
   showControls = true,
   onSelectionChange,
+  onGetDirections,
   className,
 }: Props) {
   const { data: sanctuaries } = useSanctuaries()
@@ -201,32 +203,38 @@ export function MapView({
         </Source>
 
         {/* Origin pin */}
-        <Marker
-          longitude={from.lng} latitude={from.lat} anchor="bottom"
-          onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'origin', from }) }}
-        >
-          <button
-            type="button"
-            className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-full transition hover:scale-105 active:scale-95"
-            aria-label={from.label ?? 'Start'}
+        {from && (
+          <Marker
+            longitude={from.lng} latitude={from.lat} anchor="bottom"
+            onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'origin', from }) }}
           >
-            <TeardropPin color="#7c3aed" />
-          </button>
-        </Marker>
+            <div className="flex flex-col items-center group cursor-pointer">
+              <div className="bg-white p-1.5 rounded-full shadow-lg border-2 border-brand-500 group-hover:scale-110 transition-transform">
+                <Navigation size={14} className="text-brand-500 fill-brand-500" />
+              </div>
+              {from.label === 'Your Current Location' && (
+                <div className="mt-1 px-2 py-0.5 bg-brand-600 text-white text-[10px] font-bold rounded shadow-sm whitespace-nowrap uppercase tracking-wider">
+                  You are here
+                </div>
+              )}
+            </div>
+          </Marker>
+        )}
 
         {/* Destination pin */}
-        {showDestination && (
+        {showDestination && to && (
           <Marker
             longitude={to.lng} latitude={to.lat} anchor="bottom"
             onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'destination', to }) }}
           >
-            <button
-              type="button"
-              className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-risk rounded-full transition hover:scale-105 active:scale-95"
-              aria-label={to.label ?? 'Destination'}
-            >
-              <TeardropPin color="#ef4444" />
-            </button>
+            <div className="flex flex-col items-center group cursor-pointer">
+              <div className="bg-brand-600 p-1.5 rounded-full shadow-lg border-2 border-white group-hover:scale-110 transition-transform">
+                <MapPinIcon size={16} className="text-white fill-white" />
+              </div>
+              <div className="mt-1 px-2 py-0.5 bg-white text-neutral-900 text-[10px] font-bold rounded shadow-sm border border-neutral-100 whitespace-nowrap uppercase tracking-wider">
+                {to.label ?? 'Destination'}
+              </div>
+            </div>
           </Marker>
         )}
 
@@ -271,28 +279,17 @@ export function MapView({
           )
         })}
 
-        {selection && <MapPopup selection={selection} onClose={() => select(null)} />}
+        {selection && (
+          <MapPopup
+            selection={selection}
+            onClose={() => select(null)}
+            onGetDirections={(lat, lng, label) => {
+              select(null)
+              onGetDirections?.(lat, lng, label)
+            }}
+          />
+        )}
       </Map>
     </div>
-  )
-}
-
-function TeardropPin({ color }: { color: string }) {
-  return (
-    <svg width="32" height="40" viewBox="0 0 32 40" aria-hidden="true">
-      <defs>
-        <filter id="pin-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <path
-        d="M16 1c-7.732 0-14 6.268-14 14 0 9.5 14 24 14 24s14-14.5 14-24c0-7.732-6.268-14-14-14z"
-        fill={color}
-        stroke="white"
-        strokeWidth="2"
-        filter="url(#pin-shadow)"
-      />
-      <circle cx="16" cy="15" r="5" fill="white" />
-    </svg>
   )
 }

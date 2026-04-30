@@ -1,23 +1,58 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { useState, useEffect } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import {
   Footprints, Shield, Radio, AlertTriangle,
   ChevronDown, ChevronUp, Coffee, Cross, Beer, Store, Lightbulb,
-  Compass, Loader2,
+  Compass, Loader2, Info, MapPin as MapPinIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { MapView } from '@/components/MapView'
 import { SearchBar } from '@/components/SearchBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { useLocation } from '@/lib/useLocation'
 import {
-  useRoutes, DEFAULT_ORIGIN, DEFAULT_DESTINATION,
+  useRoutes, DEFAULT_DESTINATION,
   type LngLat, type RouteId, type Route,
 } from '@/data/routes'
 
 export function MapPage() {
+  const { coords, status: locationStatus } = useLocation()
+  const [searchParams] = useSearchParams()
+  const urlLat = searchParams.get('lat')
+  const urlLng = searchParams.get('lng')
+  const toLat = searchParams.get('toLat')
+  const toLng = searchParams.get('toLng')
+  const toLabel = searchParams.get('toLabel')
+
+  // Derive initial values
+  const getInitialOrigin = () => {
+    if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' }
+    if (coords) return { ...coords, label: 'Your Current Location' }
+    return null
+  }
+
+  const getInitialDestination = () => {
+    if (toLat && toLng) return { lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' }
+    return DEFAULT_DESTINATION
+  }
+
   const isDesktop = useMediaQuery('(min-width: 768px)')
-  const [from] = useState<LngLat>(DEFAULT_ORIGIN)
-  const [to, setTo] = useState<LngLat>(DEFAULT_DESTINATION)
+  const [from, setFrom] = useState<LngLat | null>(getInitialOrigin())
+  const [to, setTo] = useState<LngLat | null>(getInitialDestination())
+
+  // Sync if URL or coords change
+  useEffect(() => {
+    if (urlLat && urlLng) {
+      setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
+    } else if (coords) {
+      setFrom({ ...coords, label: 'Your Current Location' })
+    }
+    
+    if (toLat && toLng) {
+      setTo({ lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' })
+    }
+  }, [urlLat, urlLng, toLat, toLng, toLabel, coords])
+
   const [selectedId, setSelectedId] = useState<RouteId>('safest')
   const [showLegend, setShowLegend] = useState(false)
   const [drawerExpanded, setDrawerExpanded] = useState(true)
@@ -35,14 +70,17 @@ export function MapPage() {
         <MapView
           routes={routes ?? []}
           selectedRouteId={selectedIdSafe}
-          from={from}
-          to={to}
+          from={from ?? undefined}
+          to={to ?? undefined}
+          onGetDirections={(lat, lng, label) => {
+            setTo({ lat, lng, label })
+          }}
         />
 
         {/* Floating search */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[520px] z-20">
           <SearchBar
-            destination={to}
+            destination={to as LngLat}
             onDestinationChange={setTo}
             onLegendClick={() => setShowLegend(v => !v)}
             legendActive={showLegend}
@@ -74,18 +112,55 @@ export function MapPage() {
         <MapView
           routes={routes ?? []}
           selectedRouteId={selectedIdSafe}
-          from={from}
-          to={to}
+          from={from ?? undefined}
+          to={to ?? undefined}
           onSelectionChange={(has) => { if (has) setDrawerExpanded(false) }}
+          onGetDirections={(lat, lng, label) => {
+            setTo({ lat, lng, label })
+            setDrawerExpanded(true)
+          }}
         />
-        <div className="absolute top-3 inset-x-3 z-10">
+        <div className="absolute top-3 inset-x-3 z-10 flex flex-col gap-2">
           <SearchBar
-            destination={to}
+            destination={to as LngLat}
             onDestinationChange={(d) => { setTo(d); setDrawerExpanded(true) }}
             onLegendClick={() => setShowLegend(v => !v)}
             legendActive={showLegend}
           />
+          
+          {/* Location Status Bar */}
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit shadow-sm border",
+            locationStatus === 'success' ? "bg-white text-emerald-600 border-emerald-100" : "bg-white text-amber-600 border-amber-100"
+          )}>
+            {locationStatus === 'success' ? (
+              <><MapPinIcon size={12} /> Using your current location</>
+            ) : (
+              <><Info size={12} /> Location unavailable — using manual start</>
+            )}
+          </div>
         </div>
+
+        {!from && !routesLoading && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 grid place-items-center p-8 text-center">
+            <div className="bg-white p-6 rounded-3xl shadow-xl border border-neutral-100 max-w-xs">
+              <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl grid place-items-center mx-auto mb-4">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="font-bold text-neutral-900 mb-2">Location Required</h3>
+              <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
+                We could not access your current location. Please enable location or choose a starting point manually.
+              </p>
+              <button 
+                onClick={() => setFrom({ ...DEFAULT_DESTINATION, label: 'Manual Start' })}
+                className="w-full py-3 bg-brand-600 text-white rounded-xl font-bold active:scale-95 transition"
+              >
+                Set manual start
+              </button>
+            </div>
+          </div>
+        )}
+        
         {showLegend && <LegendCard onClose={() => setShowLegend(false)} compact />}
       </div>
 

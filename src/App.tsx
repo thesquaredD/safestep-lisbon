@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router'
+import { Routes, Route } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { OnboardingPage } from '@/pages/Onboarding'
+import { HomePage } from '@/pages/Home'
 import { MapPage } from '@/pages/Map'
 import { SanctuaryPage } from '@/pages/Sanctuary'
 import { MeshPage } from '@/pages/Mesh'
@@ -13,7 +14,7 @@ export default function App() {
     <Routes>
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/map" replace />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/walk" element={<WalkPage />} />
         <Route path="/sanctuary" element={<SanctuaryPage />} />
@@ -24,3 +25,4 @@ export default function App() {
     </Routes>
   )
 }
+

@@ -1,17 +1,21 @@
 import { Link } from 'react-router'
 import { ChevronLeft, MapPinned, Lightbulb, Footprints, Store, CheckCircle2, RotateCcw } from 'lucide-react'
 import { MapView } from '@/components/MapView'
-import { useRoutes, DEFAULT_ORIGIN, DEFAULT_DESTINATION } from '@/data/routes'
+import { useLocation } from '@/lib/useLocation'
+import { useRoutes, DEFAULT_DESTINATION } from '@/data/routes'
 
 export function WalkPage() {
-  const { data: routes } = useRoutes(DEFAULT_ORIGIN, DEFAULT_DESTINATION)
+  const { coords } = useLocation()
+  const from = coords ? { ...coords, label: 'Your Current Location' } : null
+  const { data: routes } = useRoutes(from, DEFAULT_DESTINATION)
+  
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-3 border-b border-neutral-200 bg-white">
         <Link to="/map" className="text-neutral-500"><ChevronLeft size={20} /></Link>
         <div className="flex-1">
           <p className="text-xs text-neutral-500">Walking to</p>
-          <p className="font-semibold text-sm">Home — Rua de São José</p>
+          <p className="font-semibold text-sm">{DEFAULT_DESTINATION.label}</p>
         </div>
         <span className="text-xs flex items-center gap-1 text-neutral-600">📋 Legend</span>
       </div>
@@ -23,7 +27,12 @@ export function WalkPage() {
       </div>
 
       <div className="flex-1 relative">
-        <MapView routes={routes ?? []} selectedRouteId="safest" />
+        <MapView 
+          routes={routes ?? []} 
+          selectedRouteId="safest" 
+          from={from}
+          to={DEFAULT_DESTINATION}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-2 p-3 border-t border-neutral-200 bg-white">

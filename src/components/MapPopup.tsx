@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import type { Sanctuary } from '@/data/sanctuaries'
 import type { Hazard } from '@/data/hazards'
-import { DEFAULT_ORIGIN, DEFAULT_DESTINATION, type LngLat } from '@/data/routes'
+import { DEFAULT_DESTINATION, type LngLat } from '@/data/routes'
 
 /* ─────────────────────────────────────────────────────────────────────────
    The popup is the screenshot moment for this app. We hide every default
@@ -22,20 +22,19 @@ export type PopupSelection =
 export function MapPopup({
   selection,
   onClose,
+  onGetDirections,
 }: {
   selection: PopupSelection
   onClose: () => void
+  onGetDirections?: (lat: number, lng: number, label: string) => void
 }) {
-  const v = renderable(selection)
+  const v = renderable(selection, onGetDirections)
   if (!v) return null
 
   return (
     <Popup
       longitude={v.lng}
       latitude={v.lat}
-      // 'auto' lets MapLibre flip the popup to the side with the most space —
-      // critical on small viewports where a 'bottom' anchor would clip into
-      // the search bar above.
       anchor={undefined}
       offset={v.offset}
       closeButton={false}
@@ -45,13 +44,8 @@ export function MapPopup({
     >
       <article
         className="popup-card relative w-[280px] md:w-[320px] rounded-2xl bg-surface border border-black/5 overflow-hidden"
-        // Strong drop shadow with a brand-purple cast — ties to the rest of
-        // the floating chrome.
         style={{ boxShadow: 'var(--shadow-float)' }}
       >
-        {/* Header row: marker chip + title + close. The chip uses the same
-            visual language as the markers on the map itself, so users feel
-            the popup "comes from" the marker they tapped. */}
         <header className="flex items-start gap-3 px-4 pt-4">
           <span
             className={
@@ -82,7 +76,6 @@ export function MapPopup({
           </button>
         </header>
 
-        {/* Status pill (own row so it can never clip the title) */}
         {v.tag && (
           <div className="px-4 pt-2">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full ${v.tagClass}`}>
@@ -92,7 +85,6 @@ export function MapPopup({
           </div>
         )}
 
-        {/* Body: address + description */}
         <div className="px-4 py-3 space-y-2">
           {v.address && (
             <p className="text-[13px] text-neutral-600 leading-snug">
@@ -106,7 +98,6 @@ export function MapPopup({
           )}
         </div>
 
-        {/* CTA — only when it's a real action (sanctuary / destination) */}
         {v.cta && (
           <footer className="px-4 pb-4">
             <button
@@ -120,8 +111,6 @@ export function MapPopup({
           </footer>
         )}
 
-        {/* Decorative bottom accent — single hairline tied to the marker color.
-            Subtle, but it's the kind of detail that separates this from a generic card. */}
         <span
           className="absolute left-0 right-0 bottom-0 h-[2px]"
           style={{ background: v.accent, opacity: 0.85 }}
@@ -132,29 +121,28 @@ export function MapPopup({
   )
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Resolve a Selection to a flat view-model. Keeps the JSX above clean and
-   makes adding new kinds (e.g. user location, transit stop) a one-case add.
-   ───────────────────────────────────────────────────────────────────────── */
-
 type View = {
   lng: number; lat: number;
   offset: number;
   icon: React.ElementType;
-  chipBg: string;        // tailwind classes for the icon chip background
-  accent: string;        // hex for the bottom hairline
+  chipBg: string;
+  accent: string;
   title: string;
   eyebrow?: string;
   tag?: string;
-  tagClass?: string;     // tailwind classes for the status pill
+  tagClass?: string;
   address?: string;
   body?: string;
   cta?: { label: string; onClick: () => void };
 }
 
-function renderable(sel: PopupSelection): View | null {
+function renderable(
+  sel: PopupSelection,
+  onGetDirections?: (lat: number, lng: number, label: string) => void
+): View | null {
   if (sel.kind === 'origin') {
-    const f = sel.from ?? DEFAULT_ORIGIN
+    const f = sel.from
+    if (!f) return null
     const cleaned = (f.label ?? '').replace(/^Home — /, '')
     return {
       lng: f.lng, lat: f.lat, offset: 30,
@@ -203,14 +191,8 @@ function renderable(sel: PopupSelection): View | null {
       cta: {
         label: 'Get directions',
         onClick: () => {
-          // Hand off to the underlying device map for now; routing UI can
-          // intercept this later (recipes/wire-real-routing.md).
-          if (s.lat != null && s.lng != null) {
-            window.open(
-              `https://www.openstreetmap.org/directions?from=&to=${s.lat},${s.lng}`,
-              '_blank',
-              'noopener',
-            )
+          if (s.lat != null && s.lng != null && onGetDirections) {
+            onGetDirections(s.lat, s.lng, s.name || 'Sanctuary')
           }
         },
       },
