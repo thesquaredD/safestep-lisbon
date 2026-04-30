@@ -13,6 +13,7 @@ import {
   Coffee, Cross, Beer, Store,
   AlertTriangle, Lightbulb, Construction, Eye, AlertCircle,
   Navigation, MapPin as MapPinIcon,
+  GraduationCap, Hotel, TrainFront,
 } from 'lucide-react'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 import { useHazards, type Hazard } from '@/data/hazards'
@@ -21,11 +22,18 @@ import {
   type RouteId, type Route, type LngLat,
 } from '@/data/routes'
 import { MapPopup, type PopupSelection } from './MapPopup'
+import { cn } from '@/lib/cn'
 
 const TILES = 'https://tiles.openfreemap.org/styles/positron'
 
-const sanctuaryIconFor = (k: Sanctuary['kind']) =>
-  k === 'cafe' ? Coffee : k === 'pharmacy' ? Cross : k === 'bar' ? Beer : Store
+const sanctuaryIconFor = (s: Sanctuary) => {
+  if (s.business_type === 'university') return GraduationCap
+  if (s.business_type === 'hotel') return Hotel
+  if (s.business_type === 'transport hub') return TrainFront
+  
+  const k = s.kind
+  return k === 'cafe' ? Coffee : k === 'pharmacy' ? Cross : k === 'bar' ? Beer : Store
+}
 
 const hazardIconFor = (k: Hazard['kind']) =>
   k === 'broken_light' ? Lightbulb
@@ -240,7 +248,8 @@ export function MapView({
 
         {sanctuaries?.map(s => {
           if (s.lat == null || s.lng == null) return null
-          const Icon = sanctuaryIconFor(s.kind!)
+          const Icon = sanctuaryIconFor(s)
+          const isCandidate = s.status === 'candidate'
           return (
             <Marker
               key={s.id}
@@ -250,7 +259,12 @@ export function MapView({
               <button
                 type="button"
                 aria-label={s.name ?? 'Sanctuary'}
-                className="cursor-pointer block w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300"
+                className={cn(
+                  "cursor-pointer block w-9 h-9 rounded-xl grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300",
+                  isCandidate 
+                    ? "bg-gradient-to-br from-amber-400 to-amber-600" 
+                    : "bg-gradient-to-br from-brand-500 to-brand-700"
+                )}
               >
                 <Icon size={18} />
               </button>

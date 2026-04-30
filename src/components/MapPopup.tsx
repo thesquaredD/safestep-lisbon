@@ -1,7 +1,7 @@
 import { Popup } from 'react-map-gl/maplibre'
 import {
   X, Coffee, Cross, Beer, Store, Lightbulb, Construction, Eye, AlertCircle,
-  AlertTriangle, Home as HomeIcon, Flag, ArrowUpRight,
+  AlertTriangle, Home as HomeIcon, Flag, ArrowUpRight, GraduationCap, Hotel, TrainFront
 } from 'lucide-react'
 import type { Sanctuary } from '@/data/sanctuaries'
 import type { Hazard } from '@/data/hazards'
@@ -77,11 +77,16 @@ export function MapPopup({
         </header>
 
         {v.tag && (
-          <div className="px-4 pt-2">
+          <div className="px-4 pt-2 flex gap-2">
             <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full ${v.tagClass}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" aria-hidden="true" />
               {v.tag}
             </span>
+            {v.statusTag && (
+              <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full ${v.statusTagClass}`}>
+                {v.statusTag}
+              </span>
+            )}
           </div>
         )}
 
@@ -131,6 +136,8 @@ type View = {
   eyebrow?: string;
   tag?: string;
   tagClass?: string;
+  statusTag?: string;
+  statusTagClass?: string;
   address?: string;
   body?: string;
   cta?: { label: string; onClick: () => void };
@@ -169,23 +176,35 @@ function renderable(
   if (sel.kind === 'sanctuary') {
     const s = sel.data
     if (s.lat == null || s.lng == null) return null
-    const Icon =
-      s.kind === 'cafe' ? Coffee
-      : s.kind === 'pharmacy' ? Cross
-      : s.kind === 'bar' ? Beer
-      : Store
-    const label = labelForSanctuaryKind(s.kind)
+    
+    let Icon = Store
+    if (s.business_type === 'university') Icon = GraduationCap
+    else if (s.business_type === 'hotel') Icon = Hotel
+    else if (s.business_type === 'transport hub') Icon = TrainFront
+    else if (s.kind === 'cafe') Icon = Coffee
+    else if (s.kind === 'pharmacy') Icon = Cross
+    else if (s.kind === 'bar') Icon = Beer
+
+    const label = labelForSanctuaryKind(s)
+    const isCandidate = s.status === 'candidate'
+
     return {
       lng: s.lng, lat: s.lat, offset: 22,
       icon: Icon,
-      chipBg: 'bg-gradient-to-br from-brand-500 to-brand-700',
-      accent: '#7c3aed',
+      chipBg: isCandidate 
+        ? 'bg-gradient-to-br from-amber-400 to-amber-600'
+        : 'bg-gradient-to-br from-brand-500 to-brand-700',
+      accent: isCandidate ? '#f59e0b' : '#7c3aed',
       title: s.name ?? 'Sanctuary',
       eyebrow: label,
       tag: s.is_open_now ? 'Open now' : 'Closed',
       tagClass: s.is_open_now
         ? 'bg-emerald-50 text-emerald-700'
         : 'bg-neutral-100 text-neutral-500',
+      statusTag: isCandidate ? 'Candidate' : 'Verified',
+      statusTagClass: isCandidate 
+        ? 'bg-amber-50 text-amber-700 border border-amber-100'
+        : 'bg-brand-50 text-brand-700 border border-brand-100',
       address: s.address ?? undefined,
       body: s.description ?? undefined,
       cta: {
@@ -224,7 +243,12 @@ function renderable(
   }
 }
 
-function labelForSanctuaryKind(k: Sanctuary['kind']): string {
+function labelForSanctuaryKind(s: Sanctuary): string {
+  if (s.business_type === 'university') return 'University · Candidate'
+  if (s.business_type === 'hotel') return 'Hotel · Candidate'
+  if (s.business_type === 'transport hub') return 'Transport Hub · Candidate'
+
+  const k = s.kind
   if (k === 'cafe') return 'Café · Sanctuary'
   if (k === 'pharmacy') return 'Pharmacy · Sanctuary'
   if (k === 'bar') return 'Bar · Sanctuary'

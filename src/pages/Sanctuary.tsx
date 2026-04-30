@@ -1,14 +1,22 @@
 import { useMemo, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router'
-import { Coffee, Cross, Beer, Store, Search, X, MapPin, Phone, Clock as ClockIcon, Navigation } from 'lucide-react'
+import { Coffee, Cross, Beer, Store, Search, X, MapPin, Phone, Clock as ClockIcon, Navigation, ShieldCheck, Info, GraduationCap, Hotel, TrainFront } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 
-const iconFor = (k: Sanctuary['kind']) =>
-  k === 'cafe' ? Coffee : k === 'pharmacy' ? Cross : k === 'bar' ? Beer : Store
+const iconFor = (s: Sanctuary) => {
+  if (s.business_type === 'university') return GraduationCap
+  if (s.business_type === 'hotel') return Hotel
+  if (s.business_type === 'transport hub') return TrainFront
+  
+  const k = s.kind
+  return k === 'cafe' ? Coffee : k === 'pharmacy' ? Cross : k === 'bar' ? Beer : Store
+}
 
-const supportFor = (k: Sanctuary['kind']) => {
-  switch (k) {
+const supportFor = (s: Sanctuary) => {
+  if (s.support_offered) return s.support_offered
+  
+  switch (s.kind) {
     case 'cafe': return 'Wait inside, free water, help arrange transport'
     case 'pharmacy': return 'First aid kits, help call emergency services'
     case 'bar': return 'Wait inside, staff trained in bystander intervention'
@@ -82,23 +90,38 @@ export function SanctuaryPage() {
 
       <ul className="flex flex-col gap-3">
         {list.map((s) => {
-          const Icon = iconFor(s.kind!)
+          const Icon = iconFor(s)
+          const isCandidate = s.status === 'candidate'
           return (
             <li 
               key={s.id} 
               onClick={() => setSelected(s)}
               className="flex gap-3 rounded-2xl border border-neutral-200 bg-white p-3 cursor-pointer active:bg-neutral-50 transition-colors"
             >
-              <span className="w-10 h-10 rounded-lg bg-brand-50 grid place-items-center text-brand-600 shrink-0">
+              <span className={cn(
+                "w-10 h-10 rounded-lg grid place-items-center shrink-0",
+                isCandidate ? "bg-amber-50 text-amber-600" : "bg-brand-50 text-brand-600"
+              )}>
                 <Icon size={20} />
               </span>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold truncate">{s.name}</h3>
-                  <span className={cn(
-                    'text-xs px-2 py-0.5 rounded-full',
-                    s.is_open_now ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500',
-                  )}>{s.is_open_now ? 'Open' : 'Closed'}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="font-semibold truncate">{s.name}</h3>
+                    <span className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-full font-medium shrink-0',
+                      s.is_open_now ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500',
+                    )}>{s.is_open_now ? 'Open' : 'Closed'}</span>
+                  </div>
+                  {isCandidate ? (
+                    <span className="flex items-center gap-1 text-[10px] text-amber-600 font-bold uppercase tracking-tight shrink-0">
+                      <Info size={10} /> Candidate
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] text-brand-600 font-bold uppercase tracking-tight shrink-0">
+                      <ShieldCheck size={10} /> Verified
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-neutral-500">{s.address} · {s.distanceM}m</p>
                 <p className="text-xs text-neutral-600 mt-1 line-clamp-2">{s.description}</p>
@@ -114,15 +137,29 @@ export function SanctuaryPage() {
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
-                <span className="w-12 h-12 rounded-xl bg-brand-50 grid place-items-center text-brand-600">
-                  {(() => { const Icon = iconFor(selected.kind!); return <Icon size={24} /> })()}
+                <span className={cn(
+                  "w-12 h-12 rounded-xl grid place-items-center",
+                  selected.status === 'candidate' ? "bg-amber-50 text-amber-600" : "bg-brand-50 text-brand-600"
+                )}>
+                  {(() => { const Icon = iconFor(selected); return <Icon size={24} /> })()}
                 </span>
                 <div>
                   <h2 className="text-xl font-bold leading-tight">{selected.name}</h2>
-                  <span className={cn(
-                    'text-xs px-2 py-0.5 rounded-full font-medium inline-block mt-1',
-                    selected.is_open_now ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500',
-                  )}>{selected.is_open_now ? 'Open Now' : 'Closed'}</span>
+                  <div className="flex gap-2 mt-1">
+                    <span className={cn(
+                      'text-xs px-2 py-0.5 rounded-full font-medium inline-block',
+                      selected.is_open_now ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500',
+                    )}>{selected.is_open_now ? 'Open Now' : 'Closed'}</span>
+                    {selected.status === 'candidate' ? (
+                      <span className="bg-amber-50 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <Info size={12} /> Candidate Safe Spot
+                      </span>
+                    ) : (
+                      <span className="bg-brand-50 text-brand-700 text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                        <ShieldCheck size={12} /> Verified Sanctuary
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button 
@@ -139,14 +176,30 @@ export function SanctuaryPage() {
                 <p>{selected.address} · <span className="font-medium text-neutral-900">{selected.distanceM}m away</span></p>
               </div>
 
-              <div className="bg-brand-50 rounded-2xl p-4">
-                <p className="font-semibold text-brand-700 mb-1">Support Offered:</p>
-                <p className="text-brand-900 leading-snug">{supportFor(selected.kind!)}</p>
+              <div className={cn(
+                "rounded-2xl p-4",
+                selected.status === 'candidate' ? "bg-amber-50" : "bg-brand-50"
+              )}>
+                <p className={cn(
+                  "font-semibold mb-1",
+                  selected.status === 'candidate' ? "text-amber-700" : "text-brand-700"
+                )}>Support Offered:</p>
+                <p className={cn(
+                  "leading-snug",
+                  selected.status === 'candidate' ? "text-amber-900" : "text-brand-900"
+                )}>{supportFor(selected)}</p>
               </div>
 
               <div className="space-y-2">
-                <p className="font-medium text-neutral-900">Why it's a safe space:</p>
+                <p className="font-medium text-neutral-900">
+                  {selected.status === 'candidate' ? "About this candidate spot:" : "Why it's a safe space:"}
+                </p>
                 <p className="text-neutral-600 leading-relaxed">{selected.description}</p>
+                {selected.status === 'candidate' && (
+                  <p className="text-xs text-amber-700 bg-amber-50/50 p-2 rounded-lg italic">
+                    Note: This location is a candidate safe spot. It is a known public/staffed place but has not yet undergone full SafeStep verification.
+                  </p>
+                )}
               </div>
 
               {selected.hours_text && (
@@ -182,7 +235,7 @@ export function SanctuaryPage() {
             </div>
             
             <p className="text-[10px] text-center text-neutral-400 mt-4 uppercase tracking-widest font-medium">
-              Verified Sanctuary Space
+              {selected.status === 'candidate' ? "Candidate Safe Spot" : "Verified Sanctuary Space"}
             </p>
           </div>
         </div>
