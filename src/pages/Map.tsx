@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import {
   Footprints, Shield, Radio, AlertTriangle,
   ChevronDown, ChevronUp, Coffee, Cross, Beer, Store, Lightbulb,
-  Compass, Loader2, Info, MapPin as MapPinIcon,
+  Compass, Loader2, MapPin as MapPinIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { MapView } from '@/components/MapView'
@@ -15,8 +15,15 @@ import {
   type LngLat, type RouteId, type Route,
 } from '@/data/routes'
 
+const QUICK_START_POINTS: (LngLat & { id: string })[] = [
+  { id: 'nova-sbe', lat: 38.6781, lng: -9.3262, label: 'Nova SBE Carcavelos' },
+  { id: 'carcavelos-st', lat: 38.6824, lng: -9.3331, label: 'Carcavelos Station' },
+  { id: 'cais-sodre', lat: 38.7060, lng: -9.1445, label: 'Cais do Sodré' },
+  { id: 'santos', lat: 38.7065, lng: -9.1550, label: 'Santos' },
+]
+
 export function MapPage() {
-  const { coords, status: locationStatus } = useLocation()
+  const { coords } = useLocation()
   const [searchParams] = useSearchParams()
   const urlLat = searchParams.get('lat')
   const urlLng = searchParams.get('lng')
@@ -27,8 +34,8 @@ export function MapPage() {
   // Derive initial values
   const getInitialOrigin = () => {
     if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' }
-    if (coords) return { ...coords, label: 'Your Current Location' }
-    return null
+    // Default to Nova SBE for the demo
+    return QUICK_START_POINTS[0]
   }
 
   const getInitialDestination = () => {
@@ -39,19 +46,18 @@ export function MapPage() {
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const [from, setFrom] = useState<LngLat | null>(getInitialOrigin())
   const [to, setTo] = useState<LngLat | null>(getInitialDestination())
+  const [isChoosingStart, setIsChoosingStart] = useState(false)
 
-  // Sync if URL or coords change
+  // Sync if URL change
   useEffect(() => {
     if (urlLat && urlLng) {
       setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
-    } else if (coords) {
-      setFrom({ ...coords, label: 'Your Current Location' })
     }
     
     if (toLat && toLng) {
       setTo({ lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' })
     }
-  }, [urlLat, urlLng, toLat, toLng, toLabel, coords])
+  }, [urlLat, urlLng, toLat, toLng, toLabel])
 
   const [selectedId, setSelectedId] = useState<RouteId>('safest')
   const [showLegend, setShowLegend] = useState(false)
@@ -128,15 +134,57 @@ export function MapPage() {
             legendActive={showLegend}
           />
           
-          {/* Location Status Bar */}
-          <div className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit shadow-sm border",
-            locationStatus === 'success' ? "bg-white text-emerald-600 border-emerald-100" : "bg-white text-amber-600 border-amber-100"
-          )}>
-            {locationStatus === 'success' ? (
-              <><MapPinIcon size={12} /> Using your current location</>
-            ) : (
-              <><Info size={12} /> Location unavailable — using manual start</>
+          {/* Starting Point Selector */}
+          <div className="flex flex-col gap-1.5">
+            <button 
+              onClick={() => setIsChoosingStart(v => !v)}
+              className="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-xl text-xs font-semibold shadow-sm border border-neutral-200 w-full active:bg-neutral-50"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <div className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
+                <span className="text-neutral-500 font-medium">From:</span>
+                <span className="truncate text-neutral-900">{from?.label}</span>
+              </div>
+              <ChevronDown size={14} className={cn("text-neutral-400 transition", isChoosingStart && "rotate-180")} />
+            </button>
+
+            {isChoosingStart && (
+              <div className="bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-2 grid grid-cols-1 gap-1">
+                  {QUICK_START_POINTS.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => { setFrom(p); setIsChoosingStart(false) }}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition",
+                        from?.label === p.label ? "bg-brand-50 text-brand-700 font-semibold" : "hover:bg-neutral-50 text-neutral-700"
+                      )}
+                    >
+                      <MapPinIcon size={16} className={from?.label === p.label ? "text-brand-500" : "text-neutral-400"} />
+                      {p.label}
+                    </button>
+                  ))}
+                  <div className="h-px bg-neutral-100 my-1" />
+                  <button
+                    onClick={() => {
+                      if (coords) {
+                        setFrom({ ...coords, label: 'Your Current Location' })
+                      } else {
+                        // If no GPS, we just close and maybe show a hint
+                        alert("Please enable location services in your browser settings.")
+                      }
+                      setIsChoosingStart(false)
+                    }}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left hover:bg-neutral-50 text-neutral-700"
+                  >
+                    <Compass size={16} className="text-brand-500" />
+                    <div>
+                      <p className="font-medium">Use my current location</p>
+                      <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-tight">Beta Flow</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>
