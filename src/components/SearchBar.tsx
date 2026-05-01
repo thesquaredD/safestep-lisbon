@@ -18,6 +18,7 @@ export function SearchBar({
   legendActive = false,
   className,
   isMinimal = false,
+  placeholder = "Where to in Lisbon?",
 }: {
   destination: LngLat
   onDestinationChange: (dest: LngLat) => void
@@ -25,6 +26,7 @@ export function SearchBar({
   legendActive?: boolean
   className?: string
   isMinimal?: boolean
+  placeholder?: string
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -73,9 +75,9 @@ export function SearchBar({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="w-full text-left text-[13px] text-[#14101c] font-medium truncate"
+            className="w-full text-left text-[13px] text-[#14101c] font-medium truncate py-0.5"
           >
-            {destination.label ?? "Where to?"}
+            {destination?.label ?? placeholder}
           </button>
         )}
         {open && (
@@ -87,8 +89,8 @@ export function SearchBar({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search destination in Lisbon..."
-                className="flex-1 bg-transparent outline-none text-[15px] font-medium placeholder:text-neutral-400"
+                placeholder={placeholder}
+                className="flex-1 bg-transparent outline-none text-[15px] font-medium placeholder:text-neutral-400 text-[#14101c]"
               />
               {loading && <Loader2 size={14} className="text-neutral-400 animate-spin shrink-0" />}
               <button
@@ -100,7 +102,6 @@ export function SearchBar({
               </button>
             </div>
             
-            {/* Results */}
             {hits && hits.length > 0 && (
               <ul className="border-t border-black/5 max-h-[60vh] overflow-y-auto py-1 bg-white">
                 {hits.map(h => (
@@ -175,8 +176,8 @@ export function SearchBar({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Where to in Lisbon?"
-              className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-neutral-400"
+              placeholder={placeholder}
+              className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-neutral-400 text-[#14101c]"
             />
             {loading && <Loader2 size={14} className="text-neutral-400 animate-spin shrink-0" />}
             <button

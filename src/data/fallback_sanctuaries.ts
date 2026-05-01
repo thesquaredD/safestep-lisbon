@@ -1069,5 +1069,188 @@ export const FALLBACK_SANCTUARIES: SanctuaryFallback[] = [
     lat: 38.7115, lng: -9.1400, is_open_now: true, hours_text: '24h Presence',
     verified: false, status: 'candidate', support_offered: 'Law enforcement presence, security assistance',
     neighborhood: 'Chiado / Baixa', business_type: 'staffed public place', created_at: new Date().toISOString()
+  },
+  // --- USER REQUESTED PLACES (SCREENSHOTS) ---
+  {
+    id: 'f-shot-1', name: 'Casa do Pátio by Shiadu', kind: 'store', address: 'Rua do Sol a Santa Catarina 26',
+    description: 'Guest house with 24h reception and staffed entrance in Bairro Alto.',
+    lat: 38.7112, lng: -9.1455, is_open_now: true, hours_text: '24h',
+    verified: false, status: 'candidate', support_offered: '24h staff, wait inside, call help',
+    neighborhood: 'Chiado / Baixa', business_type: 'hotel', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-2', name: 'Boavista 83 Hostel Lisbon', kind: 'store', address: 'Rua da Boavista 83',
+    description: 'Hostel with 24h front desk near Cais do Sodré.',
+    lat: 38.7078, lng: -9.1485, is_open_now: true, hours_text: '24h',
+    verified: false, status: 'candidate', support_offered: '24h reception, wait inside',
+    neighborhood: 'Cais do Sodré', business_type: 'hotel', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-3', name: 'Verride Palácio Santa Catarina', kind: 'store', address: 'Rua de Santa Catarina 1',
+    description: 'Luxury hotel with 24h security and concierge near the viewpoint.',
+    lat: 38.7098, lng: -9.1472, is_open_now: true, hours_text: '24h',
+    verified: false, status: 'candidate', support_offered: '24h security, wait inside, concierge help',
+    neighborhood: 'Chiado / Baixa', business_type: 'hotel', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-4', name: 'Holy Wine', kind: 'bar', address: 'Rua de S. Paulo 120',
+    description: 'Wine bar with visible staff and well-lit entrance in Cais area.',
+    lat: 38.7105, lng: -9.1425, is_open_now: true, hours_text: '16:00 — 00:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Cais do Sodré', business_type: 'bar', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-5', name: 'Tequichilli Mexican Grill & Cocktail Bar', kind: 'cafe', address: 'Rua de S. Paulo 100',
+    description: 'Lively Mexican restaurant with staff on site until late.',
+    lat: 38.7075, lng: -9.1465, is_open_now: true, hours_text: '12:00 — 00:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, help call transport',
+    neighborhood: 'Cais do Sodré', business_type: 'restaurant', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-6', name: 'Street Smash Burgers', kind: 'cafe', address: 'Rua do Alecrim 12',
+    description: 'Late-night burger spot with visible staff near Cais do Sodré.',
+    lat: 38.7070, lng: -9.1455, is_open_now: true, hours_text: '11:00 — 02:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Cais do Sodré', business_type: 'restaurant', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-7', name: 'Ginjinha Sem Rival', kind: 'bar', address: 'Rua das Portas de Santo Antão 7',
+    description: 'Famous ginjinha spot, always busy and well-lit in the city center.',
+    lat: 38.7155, lng: -9.1395, is_open_now: true, hours_text: '09:00 — 00:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, call help',
+    neighborhood: 'Chiado / Baixa', business_type: 'bar', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-8', name: 'Cabal', kind: 'bar', address: 'Rua de S. Bento 31',
+    description: 'Staffed bar with visible entrance in the Santos area.',
+    lat: 38.7065, lng: -9.1560, is_open_now: true, hours_text: '18:00 — 02:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Santos', business_type: 'bar', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-9', name: 'Bodega Chafa — Mezcal + Tacos', kind: 'cafe', address: 'Rua da Esperança 4',
+    description: 'Busy taco spot with staff present until late evening.',
+    lat: 38.7068, lng: -9.1555, is_open_now: true, hours_text: '18:00 — 23:30',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, help arrange transport',
+    neighborhood: 'Santos', business_type: 'restaurant', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-10', name: 'HOY!', kind: 'cafe', address: 'Rua de S. Bento 21',
+    description: 'Well-lit café and restaurant in the Santos corridor.',
+    lat: 38.7062, lng: -9.1545, is_open_now: true, hours_text: '12:00 — 23:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-11', name: 'Café Janis', kind: 'cafe', address: 'Rua da Moeda 1',
+    description: 'Very busy corner café with constant staff presence and lighting.',
+    lat: 38.7072, lng: -9.1458, is_open_now: true, hours_text: '08:00 — 00:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, free water, call transport',
+    neighborhood: 'Cais do Sodré', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-12', name: 'Papoila Bar', kind: 'bar', address: 'Rua da Esperança 12',
+    description: 'Small bar with active staff and visible street entrance.',
+    lat: 38.7058, lng: -9.1535, is_open_now: true, hours_text: '18:00 — 02:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff trained in safety',
+    neighborhood: 'Santos', business_type: 'bar', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-13', name: 'Fábrica Specialty Coffee & Roastery', kind: 'cafe', address: 'Rua da Boavista 12',
+    description: 'Popular coffee shop with high foot traffic and staff.',
+    lat: 38.7075, lng: -9.1450, is_open_now: true, hours_text: '08:00 — 19:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, help call help',
+    neighborhood: 'Cais do Sodré', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-14', name: 'Ele Ela Café', kind: 'cafe', address: 'Rua de S. Bento 14',
+    description: 'Local café with visible staff and seating area.',
+    lat: 38.7065, lng: -9.1540, is_open_now: true, hours_text: '08:00 — 20:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, call help',
+    neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-15', name: 'The Folks Santos', kind: 'cafe', address: 'Avenida 24 de Julho 60',
+    description: 'Busy brunch and coffee spot on the main avenue.',
+    lat: 38.7068, lng: -9.1545, is_open_now: true, hours_text: '09:00 — 18:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-16', name: 'BLOOM - Bistro & Burgers', kind: 'cafe', address: 'Rua da Esperança 15',
+    description: 'Staffed bistro with visible street frontage.',
+    lat: 38.7062, lng: -9.1542, is_open_now: true, hours_text: '12:00 — 23:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, help call transport',
+    neighborhood: 'Santos', business_type: 'restaurant', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-17', name: 'Optica LAB', kind: 'store', address: 'Rua de S. Bento 25',
+    description: 'Staffed optical shop in a well-lit Santos street.',
+    lat: 38.7065, lng: -9.1550, is_open_now: true, hours_text: '10:00 — 19:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, call help',
+    neighborhood: 'Santos', business_type: 'store', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-18', name: 'MBH Burger House, Alcântara', kind: 'cafe', address: 'Rua de Cascais 12',
+    description: 'Burger restaurant with late hours and staff presence near LX Factory.',
+    lat: 38.7035, lng: -9.1780, is_open_now: true, hours_text: '12:00 — 00:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Alcântara', business_type: 'restaurant', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-19', name: 'La Camionetta', kind: 'cafe', address: 'Rua da Esperança 20',
+    description: 'Pizzeria with visible staff and active street presence.',
+    lat: 38.7068, lng: -9.1535, is_open_now: true, hours_text: '12:00 — 23:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, call help',
+    neighborhood: 'Santos', business_type: 'restaurant', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-20', name: 'Dear Breakfast - Santos', kind: 'cafe', address: 'Rua das Gaivotas 17',
+    description: 'Well-known brunch spot with staff on site.',
+    lat: 38.7065, lng: -9.1530, is_open_now: true, hours_text: '09:00 — 16:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, assistance',
+    neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-21', name: 'Copenhagen Coffee Lab - Santos', kind: 'cafe', address: 'Rua da Boavista 150',
+    description: 'Popular coffee lab with high visibility and staff.',
+    lat: 38.7075, lng: -9.1520, is_open_now: true, hours_text: '08:00 — 18:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-22', name: 'Copenhagen Coffee Lab (Rossio)', kind: 'cafe', address: 'Praça da Figueira 10',
+    description: 'Busy café in the city center with visible staff.',
+    lat: 38.7145, lng: -9.1395, is_open_now: true, hours_text: '08:00 — 19:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, help call help',
+    neighborhood: 'Chiado / Baixa', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-23', name: 'Senzi: kitchen•coffee•matcha', kind: 'cafe', address: 'Rua da Boavista 102',
+    description: 'Modern café with visible entrance and staff in Santos area.',
+    lat: 38.7075, lng: -9.1475, is_open_now: true, hours_text: '09:00 — 18:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-24', name: 'Momentos Wine & Cheese', kind: 'bar', address: 'Rua da Boavista 90',
+    description: 'Wine and cheese bar with staff on site near Cais area.',
+    lat: 38.7078, lng: -9.1480, is_open_now: true, hours_text: '16:00 — 00:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Santos', business_type: 'bar', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-25', name: 'House of Curated', kind: 'store', address: 'Rua da Boavista 80',
+    description: 'Concept store with visible staff in the Santos district.',
+    lat: 38.7072, lng: -9.1485, is_open_now: true, hours_text: '11:00 — 19:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, call help',
+    neighborhood: 'Santos', business_type: 'store', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-shot-26', name: 'Liberty: brunch, coffee & books', kind: 'cafe', address: 'Rua da Boavista 70',
+    description: 'Book-café with active staff presence and visible seating.',
+    lat: 38.7070, lng: -9.1490, is_open_now: true, hours_text: '09:00 — 19:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
+    neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
   }
 ];

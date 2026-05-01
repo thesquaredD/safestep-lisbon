@@ -50,11 +50,21 @@ export function SanctuaryPage() {
       .sort((a, b) => a.distanceM - b.distanceM)
   }, [data, filter, origin])
 
+  const originLabel = lat && lng ? "your selected start" : "Lisbon center"
+
   return (
     <div className="p-4 flex flex-col gap-4 relative min-h-full">
-      <div>
-        <h1 className="text-xl font-bold">Sanctuary Network</h1>
-        <p className="text-sm text-neutral-500">Vetted safe spaces near you</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-xl font-bold">Sanctuary Network</h1>
+          <p className="text-sm text-neutral-500 italic">Showing distances from {originLabel}</p>
+        </div>
+        <button 
+          onClick={() => navigate('/map')}
+          className="text-xs font-bold text-brand-600 uppercase tracking-tight hover:underline mt-1"
+        >
+          Change Start
+        </button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -62,8 +72,11 @@ export function SanctuaryPage() {
         <Chip active={filter === 'open'} onClick={() => setFilter('open')}>Open Now</Chip>
       </div>
 
-      <button className="flex items-center justify-center gap-2 rounded-full bg-brand-500 text-white py-3 font-semibold shadow-lg shadow-brand-500/30">
-        <Search size={16} /> Find Nearest Sanctuary Space
+      <button 
+        onClick={() => { if (list.length > 0) setSelected(list[0]) }}
+        className="flex items-center justify-center gap-2 rounded-full bg-brand-500 text-white py-3 font-semibold shadow-lg shadow-brand-500/30 active:scale-[0.98] transition"
+      >
+        <Search size={16} /> Find Nearest Safe Space
       </button>
 
       {error && (
