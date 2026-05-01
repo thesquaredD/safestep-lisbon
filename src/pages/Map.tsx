@@ -52,7 +52,7 @@ export function MapPage() {
 
   // Only calculate routes if both points are clearly selected
   const hasBothPoints = from && to && (from.lat !== to.lat || from.lng !== to.lng)
-  const { data: routes, loading: routesLoading, error: routesError } = useRoutes(
+  const { data: routes, loading: routesLoading, error: routesError, providerMessage } = useRoutes(
     hasBothPoints ? from : null, 
     hasBothPoints ? to : null
   )
@@ -197,6 +197,7 @@ export function MapPage() {
           selectedId={selectedIdSafe}
           onSelect={setSelectedId}
           toSet={!!to}
+          providerMessage={providerMessage}
         />
 
         {showLegend && <LegendCard onClose={() => setShowLegend(false)} />}
@@ -389,6 +390,7 @@ export function MapPage() {
               selectedId={selectedIdSafe}
               onSelect={setSelectedId}
               toSet={!!to}
+              providerMessage={providerMessage}
             />
             <div className="grid grid-cols-4 gap-2 mt-4">
               <ActionChip to="/walk"     icon={Footprints}     label="Walk" from={from} />
@@ -500,7 +502,7 @@ function RouteOptionsHeader() {
 }
 
 function RouteList({
-  routes, loading, error, selectedId, onSelect, toSet
+  routes, loading, error, selectedId, onSelect, toSet, providerMessage
 }: {
   routes: Route[] | null
   loading: boolean
@@ -508,6 +510,7 @@ function RouteList({
   selectedId: RouteId
   onSelect: (id: RouteId) => void
   toSet: boolean
+  providerMessage?: string
 }) {
   if (!toSet) {
     return (
@@ -522,30 +525,29 @@ function RouteList({
       </div>
     )
   }
-  if (error) {
-    return (
-      <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm p-3">
-        Couldn't get routes. {error}
-      </div>
-    )
-  }
-  if (loading || !routes) {
-    return (
-      <div className="flex flex-col gap-2">
-        {[0, 1, 2].map(i => (
-          <div key={i} className="h-[64px] rounded-xl bg-neutral-100 animate-pulse" />
-        ))}
-      </div>
-    )
-  }
-  if (routes.length === 0) {
-    return (
-      <p className="text-sm text-neutral-500">No routes found between these points.</p>
-    )
-  }
   return (
     <div className="flex flex-col gap-2">
-      {routes.map(r => (
+      {providerMessage && (
+        <div className="mb-1 p-2 bg-amber-50 border border-amber-100 rounded-lg text-[10px] text-amber-700 font-medium italic">
+          {providerMessage}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm p-3">
+          Couldn't get routes. {error}
+        </div>
+      )}
+      {loading && !routes && (
+        <div className="flex flex-col gap-2">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="h-[64px] rounded-xl bg-neutral-100 animate-pulse" />
+          ))}
+        </div>
+      )}
+      {routes && routes.length === 0 && !loading && (
+        <p className="text-sm text-neutral-500">No walking routes found between these points.</p>
+      )}
+      {routes && routes.map(r => (
         <RouteRow key={r.id} r={r} active={selectedId === r.id} onClick={() => onSelect(r.id)} />
       ))}
     </div>
@@ -597,7 +599,7 @@ function ActionMenu({ from }: { from?: LngLat | null }) {
    ───────────────────────────────────────────────────────────────────────── */
 
 function RouteOptionsCard({
-  routes, loading, error, selectedId, onSelect, toSet
+  routes, loading, error, selectedId, onSelect, toSet, providerMessage
 }: {
   routes: Route[] | null
   loading: boolean
@@ -605,6 +607,7 @@ function RouteOptionsCard({
   selectedId: RouteId
   onSelect: (id: RouteId) => void
   toSet: boolean
+  providerMessage?: string
 }) {
   return (
     <div className="absolute bottom-6 right-6 z-10 w-[340px]">
@@ -623,6 +626,7 @@ function RouteOptionsCard({
           selectedId={selectedId}
           onSelect={onSelect}
           toSet={toSet}
+          providerMessage={providerMessage}
         />
       </div>
     </div>

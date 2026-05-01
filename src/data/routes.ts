@@ -16,13 +16,14 @@ export type Route = {
   tone: 'safe' | 'warn' | 'risk'
   geometry: LineString
   summary?: string
+  provider?: 'openrouteservice' | 'osrm'
 }
 
 export const DEFAULT_ORIGIN: LngLat = {
-  lng: -9.1396, lat: 38.7165, label: 'Home — Rua de São José, Lisboa',
+  lng: -9.3255, lat: 38.6775, label: 'Nova SBE Carcavelos',
 }
 export const DEFAULT_DESTINATION: LngLat = {
-  lng: -9.1366, lat: 38.7079, label: 'Praça do Comércio, Lisboa',
+  lng: -9.3331, lat: 38.6824, label: 'Carcavelos Station',
 }
 
 export const ORIGIN = DEFAULT_ORIGIN
@@ -91,7 +92,7 @@ function calculateSafetyMetrics(
   sanctuaries: any[],
   hazards: any[],
 ): SafetyMetrics {
-  let baseScore = 65
+  let baseScore = 60 // Lower base to make 90+ harder
   const nearbySanctuaryIds = new Set<string>()
   const nearbyHazardIds = new Set<string>()
   
@@ -109,10 +110,10 @@ function calculateSafetyMetrics(
           nearbySanctuaryIds.add(s.id)
           if (s.status === 'candidate') {
             candidateCount++
-            baseScore += 8
+            baseScore += 5
           } else {
             verifiedCount++
-            baseScore += 15
+            baseScore += 12
           }
         }
       }
@@ -142,7 +143,7 @@ function calculateSafetyMetrics(
    Hook — fetches routes whenever from/to change.
    ─────────────────────────────────────────────────────────────────────── */
 
-type State = { data: Route[] | null; loading: boolean; error: string | null }
+type State = { data: Route[] | null; loading: boolean; error: string | null; providerMessage?: string }
 
 export function useRoutes(from: LngLat | null, to: LngLat | null): State {
   const [state, setState] = useState<State>({ data: null, loading: false, error: null })
@@ -155,18 +156,29 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
     let cancelled = false
     setState(s => ({ ...s, loading: true, error: null }))
     
-    Promise.all([fetchOsrm(from, to), fetchSafetyData()])
-      .then(([routes, data]) => {
+    // Attempt Primary Provider (ORS), fallback to OSRM
+    async function load() {
+      try {
+        const safetyData = await fetchSafetyData()
+        let routes: Omit<Route, 'id' | 'label' | 'tone'>[] = []
+        let providerMessage = ''
+
+        try {
+          routes = await fetchOpenRouteService(from!, to!)
+        } catch (err: any) {
+          console.warn('OpenRouteService failed, falling back to OSRM:', err.message)
+          providerMessage = 'OpenRouteService API key missing — using prototype fallback route.'
+          routes = await fetchOsrm(from!, to!)
+        }
+
         if (cancelled) return
 
-        const isIndoorTo = to.label?.toLowerCase().includes('inside') || to.label?.toLowerCase().includes('entrance')
-        const indoorNote = isIndoorTo ? "This place is inside a campus/building — route shown to nearest pedestrian entrance." : null
+        const isIndoorTo = to?.label?.toLowerCase().includes('inside') || to?.label?.toLowerCase().includes('entrance')
+        const indoorNote = isIndoorTo ? "Indoor point — route shown to nearest pedestrian entrance." : null
 
         // Calculate real safety metrics for each alternative
         const scoredRoutes = routes.map(r => {
-          const metrics = calculateSafetyMetrics(r.geometry, data.sanctuaries, data.hazards)
-          
-          // Generate summary text
+          const metrics = calculateSafetyMetrics(r.geometry, safetyData.sanctuaries, safetyData.hazards)
           const safeTotal = metrics.verifiedCount + metrics.candidateCount
           const level = SCORE_LEVELS(metrics.score)
           
@@ -182,67 +194,93 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
           }
         })
 
-        // 1. Identify "Fastest" (minimum duration/distance)
+        // Identify \"Fastest\" and \"Safest\"
         const sortedByTime = [...scoredRoutes].sort((a, b) => a.minutes - b.minutes)
         const fastest = sortedByTime[0]
-
-        // 2. Identify "Safest" (highest safety score)
         const sortedBySafety = [...scoredRoutes].sort((a, b) => b.score - a.score)
         const safest = sortedBySafety[0]
 
-        // 3. Label everything appropriately
-        const labeledRoutes: Route[] = scoredRoutes.map(r => {
-          let id: RouteId = 'balanced'
-          
-          if (r === safest && r === fastest) {
-            id = 'safest' // If one route is both, call it safest
-          } else if (r === fastest) {
-            id = 'fastest'
-          } else if (r === safest) {
-            id = 'safest'
-          } else {
-            id = 'balanced'
-          }
-
-          return {
-            ...r,
-            id,
-            label: LABELS[id],
-            tone: TONES[id]
-          }
-        })
-
-        // Ensure we don't have duplicate IDs (e.g. if OSRM returns 1 route, it's just 'safest')
+        // Label and deduplicate IDs
         const finalRoutes: Route[] = []
         const seenIds = new Set<RouteId>()
-        labeledRoutes.forEach(r => {
-          if (!seenIds.has(r.id)) {
-            finalRoutes.push(r)
-            seenIds.add(r.id)
-          } else if (!seenIds.has('balanced')) {
-            r.id = 'balanced'
-            r.label = LABELS['balanced']
-            r.tone = TONES['balanced']
-            finalRoutes.push(r)
-            seenIds.add('balanced')
+        
+        scoredRoutes.forEach(r => {
+          let id: RouteId = 'balanced'
+          if (r === safest && r === fastest) id = 'safest'
+          else if (r === fastest) id = 'fastest'
+          else if (r === safest) id = 'safest'
+          
+          if (seenIds.has(id)) {
+            if (!seenIds.has('balanced')) id = 'balanced'
+            else return // Skip if we have 3 already
           }
+
+          finalRoutes.push({ ...r, id, label: LABELS[id], tone: TONES[id] } as Route)
+          seenIds.add(id)
         })
 
         const displayOrder: Record<RouteId, number> = { safest: 0, balanced: 1, fastest: 2 }
         setState({ 
           data: finalRoutes.sort((a, b) => displayOrder[a.id] - displayOrder[b.id]), 
           loading: false, 
-          error: null 
+          error: null,
+          providerMessage
         })
-      })
-      .catch(err => { 
-        if (!cancelled) setState({ data: null, loading: false, error: err.message ?? 'Routing failed' }) 
-      })
 
+      } catch (err: any) {
+        if (!cancelled) setState({ data: null, loading: false, error: err.message ?? 'Routing failed' }) 
+      }
+    }
+
+    load()
     return () => { cancelled = true }
   }, [fromKey, toKey])
 
   return state
+}
+
+async function fetchOpenRouteService(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | 'label' | 'tone'>[]> {
+  const apiKey = import.meta.env.VITE_ORS_API_KEY
+  if (!apiKey) throw new Error('MISSING_KEY')
+
+  const url = 'https://api.openrouteservice.org/v2/directions/foot-walking/geojson'
+  const body = {
+    coordinates: [[from.lng, from.lat], [to.lng, to.lat]],
+    alternative_routes: { target_count: 3 },
+    attributes: ['length', 'duration']
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': apiKey
+    },
+    body: JSON.stringify(body)
+  })
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}))
+    throw new Error(errorBody.error?.message || `ORS failed with ${res.status}`)
+  }
+
+  const json = await res.json()
+  const features = json.features ?? []
+  
+  return features.map((f: any) => {
+    const props = f.properties.summary
+    const km = Math.round((props.distance / 1000) * 10) / 10
+    // Use human walking pace for timing consistency
+    const calcMinutes = Math.max(1, Math.round((km / 4.8) * 60))
+
+    return {
+      score: 0,
+      minutes: calcMinutes,
+      km,
+      geometry: f.geometry,
+      provider: 'openrouteservice'
+    }
+  })
 }
 
 async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | 'label' | 'tone'>[]> {
@@ -253,28 +291,21 @@ async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | '
 
   const res = await fetch(url)
   if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({ message: 'Unknown error' }))
-    throw new Error(`Routing failed (${res.status}): ${errorBody.message || res.statusText}`)
+    const errorBody = await res.json().catch(() => ({}))
+    throw new Error(`OSRM failed (${res.status}): ${errorBody.message || res.statusText}`)
   }
   const json = await res.json()
   if (json.code !== 'Ok') throw new Error(json.message ?? 'No route found')
 
-  const raw = (json.routes ?? []) as Array<{
-    geometry: LineString
-    duration: number
-    distance: number
-  }>
-  
-  return raw.map(r => {
+  return (json.routes ?? []).map((r: any) => {
     const km = Math.round(r.distance / 100) / 10
-    // credible walking time: distance / 4.8 km/h
     const calcMinutes = Math.max(1, Math.round((km / 4.8) * 60))
-    
     return {
       score: 0,
       minutes: calcMinutes,
       km: km,
       geometry: r.geometry,
+      provider: 'osrm'
     }
   })
 }
@@ -299,4 +330,3 @@ export function routesToFeatureCollection(
     })),
   }
 }
-
