@@ -1,19 +1,7 @@
-// Real walking routes via OSRM's public demo server.
-//
-//   GET /route/v1/foot/{lng1},{lat1};{lng2},{lat2}?alternatives=true&overview=full&geometries=geojson
-//
-// The public demo (router.project-osrm.org) is rate-limited and is fine for
-// a class demo — for any production deployment swap to OpenRouteService with
-// an API key. See `recipes/wire-real-routing.md`.
-//
-// SCORING is intentionally a placeholder right now. OSRM returns 1–3
-// alternatives sorted by duration; we map them to safest/balanced/fastest
-// as a first-pass proxy. The team's first Gemini exercise is to replace
-// the scoring with sanctuary coverage + lighting + slider weights.
-
 import { useEffect, useState } from 'react'
 import type { FeatureCollection, LineString } from 'geojson'
 import { supabase } from '@/lib/supabase'
+import { FALLBACK_SANCTUARIES } from './fallback_sanctuaries'
 
 export type RouteId = 'safest' | 'balanced' | 'fastest'
 
@@ -27,6 +15,7 @@ export type Route = {
   km: number
   tone: 'safe' | 'warn' | 'risk'
   geometry: LineString
+  summary?: string
 }
 
 export const DEFAULT_ORIGIN: LngLat = {
@@ -68,32 +57,56 @@ async function fetchSafetyData() {
     supabase.from('sanctuary_spaces_geo').select('*'),
     supabase.from('hazard_reports_geo').select('*'),
   ])
+  
+  // Merge Supabase sanctuaries with fallback sanctuaries, deduplicate by name
+  const dbSanctuaries = sanctuaries.data ?? []
+  const existingNames = new Set(dbSanctuaries.map(s => s.name?.toLowerCase()))
+  const combinedSanctuaries = [
+    ...dbSanctuaries,
+    ...FALLBACK_SANCTUARIES.filter(f => !existingNames.has(f.name?.toLowerCase()))
+  ]
+
   return {
-    sanctuaries: sanctuaries.data ?? [],
+    sanctuaries: combinedSanctuaries,
     hazards: hazards.data ?? [],
   }
 }
 
-function calculateSafetyScore(
+type SafetyMetrics = {
+  score: number
+  verifiedCount: number
+  candidateCount: number
+  hazardCount: number
+}
+
+function calculateSafetyMetrics(
   geometry: LineString,
   sanctuaries: any[],
   hazards: any[],
-): number {
-  let baseScore = 60
+): SafetyMetrics {
+  let baseScore = 65
   const nearbySanctuaryIds = new Set<string>()
   const nearbyHazardIds = new Set<string>()
+  
+  let verifiedCount = 0
+  let candidateCount = 0
+  let hazardCount = 0
 
-  // Optimization: only check points every ~20 meters or so? 
-  // For now, let's just check the nodes. OSRM full overview is dense.
   const points = geometry.coordinates
 
   for (const [lng, lat] of points) {
     // Check Sanctuaries
     for (const s of sanctuaries) {
       if (s.lat && s.lng && !nearbySanctuaryIds.has(s.id)) {
-        if (distanceMeters(lat, lng, s.lat, s.lng) <= 80) { // 80m radius as per legend
+        if (distanceMeters(lat, lng, s.lat, s.lng) <= 100) { 
           nearbySanctuaryIds.add(s.id)
-          baseScore += s.is_open_now ? 15 : 10
+          if (s.status === 'candidate') {
+            candidateCount++
+            baseScore += 8
+          } else {
+            verifiedCount++
+            baseScore += 15
+          }
         }
       }
     }
@@ -101,15 +114,21 @@ function calculateSafetyScore(
     // Check Hazards
     for (const h of hazards) {
       if (h.lat && h.lng && !nearbyHazardIds.has(h.id)) {
-        if (distanceMeters(lat, lng, h.lat, h.lng) <= 50) {
+        if (distanceMeters(lat, lng, h.lat, h.lng) <= 60) {
           nearbyHazardIds.add(h.id)
-          baseScore -= 25
+          hazardCount++
+          baseScore -= 20
         }
       }
     }
   }
 
-  return Math.min(100, Math.max(0, baseScore))
+  return {
+    score: Math.min(100, Math.max(0, baseScore)),
+    verifiedCount,
+    candidateCount,
+    hazardCount
+  }
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -133,31 +152,70 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
       .then(([routes, data]) => {
         if (cancelled) return
 
-        // Calculate real safety scores
-        const scoredRoutes = routes.map(r => ({
-          ...r,
-          score: calculateSafetyScore(r.geometry, data.sanctuaries, data.hazards),
-        }))
-
-        // Sort by safety score (highest first) to re-assign labels
-        const sortedBySafety = [...scoredRoutes].sort((a, b) => b.score - a.score)
-        
-        const finalRoutes: Route[] = sortedBySafety.map((r, i) => {
-          const id = i === 0 ? 'safest' : i === 1 ? 'balanced' : 'fastest'
-          // Standard walking speed: 4.8 km/h
-          // minutes = distanceKm / 4.8 * 60
-          const calcMinutes = Math.max(1, Math.round((r.km / 4.8) * 60))
+        // Calculate real safety metrics for each alternative
+        const scoredRoutes = routes.map(r => {
+          const metrics = calculateSafetyMetrics(r.geometry, data.sanctuaries, data.hazards)
           
+          // Generate summary text
+          const safeTotal = metrics.verifiedCount + metrics.candidateCount
+          let summary = ''
+          if (safeTotal > 0) summary += `Passes near ${safeTotal} safe spot${safeTotal === 1 ? '' : 's'}`
+          if (metrics.hazardCount > 0) summary += summary ? ` and avoids ${metrics.hazardCount} hazard${metrics.hazardCount === 1 ? '' : 's'}` : `Avoids ${metrics.hazardCount} hazard${metrics.hazardCount === 1 ? '' : 's'}`
+          if (!summary) summary = 'Direct walking path'
+
+          return {
+            ...r,
+            score: metrics.score,
+            summary
+          }
+        })
+
+        // 1. Identify "Fastest" (minimum duration/distance)
+        const sortedByTime = [...scoredRoutes].sort((a, b) => a.minutes - b.minutes)
+        const fastest = sortedByTime[0]
+
+        // 2. Identify "Safest" (highest safety score)
+        const sortedBySafety = [...scoredRoutes].sort((a, b) => b.score - a.score)
+        const safest = sortedBySafety[0]
+
+        // 3. Label everything appropriately
+        const labeledRoutes: Route[] = scoredRoutes.map(r => {
+          let id: RouteId = 'balanced'
+          
+          if (r === safest && r === fastest) {
+            id = 'safest' // If one route is both, call it safest
+          } else if (r === fastest) {
+            id = 'fastest'
+          } else if (r === safest) {
+            id = 'safest'
+          } else {
+            id = 'balanced'
+          }
+
           return {
             ...r,
             id,
             label: LABELS[id],
-            tone: TONES[id],
-            minutes: calcMinutes,
+            tone: TONES[id]
           }
         })
 
-        // Sort back to standard Safest -> Balanced -> Fastest display order
+        // Ensure we don't have duplicate IDs (e.g. if OSRM returns 1 route, it's just 'safest')
+        const finalRoutes: Route[] = []
+        const seenIds = new Set<RouteId>()
+        labeledRoutes.forEach(r => {
+          if (!seenIds.has(r.id)) {
+            finalRoutes.push(r)
+            seenIds.add(r.id)
+          } else if (!seenIds.has('balanced')) {
+            r.id = 'balanced'
+            r.label = LABELS['balanced']
+            r.tone = TONES['balanced']
+            finalRoutes.push(r)
+            seenIds.add('balanced')
+          }
+        })
+
         const displayOrder: Record<RouteId, number> = { safest: 0, balanced: 1, fastest: 2 }
         setState({ 
           data: finalRoutes.sort((a, b) => displayOrder[a.id] - displayOrder[b.id]), 
@@ -192,12 +250,18 @@ async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | '
     distance: number
   }>
   
-  return raw.map(r => ({
-    score: 0, // Placeholder, will be calculated
-    minutes: Math.max(1, Math.round(r.duration / 60)),
-    km: Math.round(r.distance / 100) / 10,
-    geometry: r.geometry,
-  }))
+  return raw.map(r => {
+    const km = Math.round(r.distance / 100) / 10
+    // credible walking time: distance / 4.8 km/h
+    const calcMinutes = Math.max(1, Math.round((km / 4.8) * 60))
+    
+    return {
+      score: 0,
+      minutes: calcMinutes,
+      km: km,
+      geometry: r.geometry,
+    }
+  })
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

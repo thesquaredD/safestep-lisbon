@@ -273,6 +273,7 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
       <div className="flex-1">
         <div className="font-semibold text-[14px]">{r.label}</div>
         <div className="text-xs text-neutral-500">{r.minutes} min · {r.km} km</div>
+        {r.summary && <div className="text-[10px] text-brand-600 font-medium mt-0.5 line-clamp-1 italic">{r.summary}</div>}
       </div>
       <ChevronDown size={18} className={cn('text-neutral-400 transition', active && 'rotate-180 text-brand-500')} />
     </button>
