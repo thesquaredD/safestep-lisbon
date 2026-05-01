@@ -56,7 +56,12 @@ export function MapPage() {
   const [selectedId, setSelectedId] = useState<RouteId>('safest')
   const [showLegend, setShowLegend] = useState(false)
   const [drawerExpanded, setDrawerExpanded] = useState(true)
-  const { data: routes, loading: routesLoading, error: routesError } = useRoutes(from, to)
+  const { 
+    data: routes, 
+    loading: routesLoading, 
+    error: routesError,
+    provider: routingProvider 
+  } = useRoutes(from, to)
 
   // If the chosen route disappears (e.g. fewer alternatives returned) fall back.
   const routeById = (id: RouteId) => routes?.find(r => r.id === id)
@@ -93,6 +98,7 @@ export function MapPage() {
           routes={routes}
           loading={routesLoading}
           error={routesError}
+          provider={routingProvider}
           selectedId={selectedIdSafe}
           onSelect={setSelectedId}
         />
@@ -178,11 +184,12 @@ export function MapPage() {
 
         {drawerExpanded && (
           <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <RouteOptionsHeader />
+            <RouteOptionsHeader provider={routingProvider} />
             <RouteList
               routes={routes}
               loading={routesLoading}
               error={routesError}
+              provider={routingProvider}
               selectedId={selectedIdSafe}
               onSelect={setSelectedId}
             />
@@ -240,28 +247,50 @@ function ActionChip({ to, icon: Icon, label }: { to: string; icon: React.Element
   )
 }
 
-function RouteOptionsHeader() {
+function RouteOptionsHeader({ provider }: { provider?: string }) {
+  const providerLabel = provider === 'ors' 
+    ? 'OpenRouteService walking route' 
+    : provider === 'osrm' 
+      ? 'Prototype fallback route' 
+      : ''
+
   return (
-    <div className="flex items-baseline justify-between mb-3">
-      <h2 className="font-display text-[16px] font-medium text-[#14101c]">Route Options</h2>
-      <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">Lisboa</span>
+    <div className="flex flex-col mb-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="font-display text-[16px] font-medium text-[#14101c]">Route Options</h2>
+        <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">Lisboa</span>
+      </div>
+      {providerLabel && (
+        <span className={cn(
+          "text-[10px] font-bold uppercase tracking-wider mt-1",
+          provider === 'ors' ? "text-emerald-600" : "text-amber-600"
+        )}>
+          {providerLabel}
+        </span>
+      )}
     </div>
   )
 }
 
 function RouteList({
-  routes, loading, error, selectedId, onSelect,
+  routes, loading, error, provider, selectedId, onSelect,
 }: {
   routes: Route[] | null
   loading: boolean
   error: string | null
+  provider: string
   selectedId: RouteId
   onSelect: (id: RouteId) => void
 }) {
   if (error) {
     return (
-      <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm p-3">
-        Couldn't get routes. {error}
+      <div className="flex flex-col gap-2">
+        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm p-3 font-medium">
+          Routing failed. {error}
+        </div>
+        <div className="text-[10px] text-neutral-400 uppercase tracking-widest text-center">
+          No routing available
+        </div>
       </div>
     )
   }
@@ -281,6 +310,11 @@ function RouteList({
   }
   return (
     <div className="flex flex-col gap-2">
+      {provider === 'osrm' && import.meta.env.VITE_ORS_API_KEY && (
+        <div className="px-3 py-2 bg-amber-50 border border-amber-100 rounded-xl text-[11px] text-amber-700 leading-tight mb-1">
+          <strong>OpenRouteService failed</strong> — using prototype fallback route.
+        </div>
+      )}
       {routes.map(r => (
         <RouteRow key={r.id} r={r} active={selectedId === r.id} onClick={() => onSelect(r.id)} />
       ))}
@@ -332,11 +366,12 @@ function ActionMenu() {
    ───────────────────────────────────────────────────────────────────────── */
 
 function RouteOptionsCard({
-  routes, loading, error, selectedId, onSelect,
+  routes, loading, error, provider, selectedId, onSelect,
 }: {
   routes: Route[] | null
   loading: boolean
   error: string | null
+  provider: string
   selectedId: RouteId
   onSelect: (id: RouteId) => void
 }) {
@@ -344,9 +379,19 @@ function RouteOptionsCard({
     <div className="absolute bottom-6 right-6 z-10 w-[340px]">
       <div className="rounded-2xl bg-surface/96 backdrop-blur-md border border-black/5 p-4 shadow-[var(--shadow-float)]">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-baseline gap-2">
-            <h2 className="font-display text-[15px] font-medium text-[#14101c]">Route Options</h2>
-            <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">Lisboa</span>
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-2">
+              <h2 className="font-display text-[15px] font-medium text-[#14101c]">Route Options</h2>
+              <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">Lisboa</span>
+            </div>
+            {provider !== 'none' && !loading && (
+              <span className={cn(
+                "text-[9px] font-bold uppercase tracking-wider mt-0.5",
+                provider === 'ors' ? "text-emerald-600" : "text-amber-600"
+              )}>
+                {provider === 'ors' ? 'OpenRouteService walking route' : 'Prototype fallback route'}
+              </span>
+            )}
           </div>
           {loading && <Loader2 size={14} className="text-neutral-400 animate-spin" />}
         </div>
@@ -354,6 +399,7 @@ function RouteOptionsCard({
           routes={routes}
           loading={loading}
           error={error}
+          provider={provider}
           selectedId={selectedId}
           onSelect={onSelect}
         />

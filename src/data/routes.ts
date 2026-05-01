@@ -1,21 +1,14 @@
-// Real walking routes via OSRM's public demo server.
+// Real walking routes via OpenRouteService (primary) or OSRM (fallback).
 //
-//   GET /route/v1/foot/{lng1},{lat1};{lng2},{lat2}?alternatives=true&overview=full&geometries=geojson
-//
-// The public demo (router.project-osrm.org) is rate-limited and is fine for
-// a class demo — for any production deployment swap to OpenRouteService with
-// an API key. See `recipes/wire-real-routing.md`.
-//
-// SCORING is intentionally a placeholder right now. OSRM returns 1–3
-// alternatives sorted by duration; we map them to safest/balanced/fastest
-// as a first-pass proxy. The team's first Gemini exercise is to replace
-// the scoring with sanctuary coverage + lighting + slider weights.
+// SCORING is calculated based on sanctuary coverage and hazards.
+// The provider is tracked and logged for developer debugging.
 
 import { useEffect, useState } from 'react'
 import type { FeatureCollection, LineString } from 'geojson'
 import { supabase } from '@/lib/supabase'
 
 export type RouteId = 'safest' | 'balanced' | 'fastest'
+export type RoutingProvider = 'ors' | 'osrm' | 'none'
 
 export type LngLat = { lng: number; lat: number; label?: string }
 
@@ -27,6 +20,7 @@ export type Route = {
   km: number
   tone: 'safe' | 'warn' | 'risk'
   geometry: LineString
+  provider: RoutingProvider
 }
 
 export const DEFAULT_ORIGIN: LngLat = {
@@ -35,6 +29,10 @@ export const DEFAULT_ORIGIN: LngLat = {
 export const DEFAULT_DESTINATION: LngLat = {
   lng: -9.1366, lat: 38.7079, label: 'Praça do Comércio, Lisboa',
 }
+
+// Specific test route coordinates (approximate entrances)
+export const LX_FACTORY: LngLat = { lng: -9.1789, lat: 38.7037, label: 'LX Factory' }
+export const VILA_GALE_OPERA: LngLat = { lng: -9.1774, lat: 38.7018, label: 'Vila Galé Ópera' }
 
 export const ORIGIN = DEFAULT_ORIGIN
 export const DESTINATION = DEFAULT_DESTINATION
@@ -83,15 +81,13 @@ function calculateSafetyScore(
   const nearbySanctuaryIds = new Set<string>()
   const nearbyHazardIds = new Set<string>()
 
-  // Optimization: only check points every ~20 meters or so? 
-  // For now, let's just check the nodes. OSRM full overview is dense.
   const points = geometry.coordinates
 
   for (const [lng, lat] of points) {
     // Check Sanctuaries
     for (const s of sanctuaries) {
       if (s.lat && s.lng && !nearbySanctuaryIds.has(s.id)) {
-        if (distanceMeters(lat, lng, s.lat, s.lng) <= 80) { // 80m radius as per legend
+        if (distanceMeters(lat, lng, s.lat, s.lng) <= 80) {
           nearbySanctuaryIds.add(s.id)
           baseScore += s.is_open_now ? 15 : 10
         }
@@ -116,26 +112,53 @@ function calculateSafetyScore(
    Hook — fetches routes whenever from/to change.
    ─────────────────────────────────────────────────────────────────────── */
 
-type State = { data: Route[] | null; loading: boolean; error: string | null }
+type State = { 
+  data: Route[] | null; 
+  loading: boolean; 
+  error: string | null;
+  provider: RoutingProvider;
+}
 
 export function useRoutes(from: LngLat | null, to: LngLat | null): State {
-  const [state, setState] = useState<State>({ data: null, loading: false, error: null })
+  const [state, setState] = useState<State>({ data: null, loading: false, error: null, provider: 'none' })
 
   const fromKey = from ? `${from.lng},${from.lat}` : ''
   const toKey   = to   ? `${to.lng},${to.lat}`     : ''
 
   useEffect(() => {
-    if (!from || !to) { setState({ data: null, loading: false, error: null }); return }
+    if (!from || !to) { setState({ data: null, loading: false, error: null, provider: 'none' }); return }
     let cancelled = false
-    setState(s => ({ ...s, loading: true, error: null }))
+    setState(s => ({ ...s, loading: true, error: null, provider: 'none' }))
     
-    Promise.all([fetchOsrm(from, to), fetchSafetyData()])
-      .then(([routes, data]) => {
+    const orsKey = import.meta.env.VITE_ORS_API_KEY
+    
+    const fetchRoutes = async () => {
+      try {
+        let routes: Omit<Route, 'id' | 'label' | 'tone' | 'provider'>[] = []
+        let provider: RoutingProvider = 'none'
+
+        if (orsKey) {
+          try {
+            routes = await fetchOrs(from, to, orsKey)
+            provider = 'ors'
+          } catch (e) {
+            console.error('ORS failed, falling back to OSRM:', e)
+            routes = await fetchOsrm(from, to)
+            provider = 'osrm'
+          }
+        } else {
+          console.warn('VITE_ORS_API_KEY not found, using OSRM fallback')
+          routes = await fetchOsrm(from, to)
+          provider = 'osrm'
+        }
+
+        const data = await fetchSafetyData()
         if (cancelled) return
 
         // Calculate real safety scores
         const scoredRoutes = routes.map(r => ({
           ...r,
+          provider,
           score: calculateSafetyScore(r.geometry, data.sanctuaries, data.hazards),
         }))
 
@@ -144,8 +167,6 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
         
         const finalRoutes: Route[] = sortedBySafety.map((r, i) => {
           const id = i === 0 ? 'safest' : i === 1 ? 'balanced' : 'fastest'
-          // Standard walking speed: 4.8 km/h
-          // minutes = distanceKm / 4.8 * 60
           const calcMinutes = Math.max(1, Math.round((r.km / 4.8) * 60))
           
           return {
@@ -154,20 +175,22 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
             label: LABELS[id],
             tone: TONES[id],
             minutes: calcMinutes,
-          }
+          } as Route
         })
 
-        // Sort back to standard Safest -> Balanced -> Fastest display order
         const displayOrder: Record<RouteId, number> = { safest: 0, balanced: 1, fastest: 2 }
         setState({ 
           data: finalRoutes.sort((a, b) => displayOrder[a.id] - displayOrder[b.id]), 
           loading: false, 
-          error: null 
+          error: null,
+          provider
         })
-      })
-      .catch(err => { 
-        if (!cancelled) setState({ data: null, loading: false, error: err.message ?? 'Routing failed' }) 
-      })
+      } catch (err: any) {
+        if (!cancelled) setState({ data: null, loading: false, error: err.message ?? 'Routing failed', provider: 'none' })
+      }
+    }
+
+    fetchRoutes()
 
     return () => { cancelled = true }
   }, [fromKey, toKey])
@@ -175,13 +198,91 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
   return state
 }
 
-async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | 'label' | 'tone'>[]> {
+async function fetchOrs(from: LngLat, to: LngLat, apiKey: string): Promise<Omit<Route, 'id' | 'label' | 'tone' | 'provider'>[]> {
+  const url = 'https://api.openrouteservice.org/v2/directions/foot-walking/geojson'
+  
+  // Coordinates MUST be [longitude, latitude]
+  const body = {
+    coordinates: [
+      [from.lng, from.lat],
+      [to.lng, to.lat]
+    ],
+    alternatives: true,
+    units: 'm'
+  }
+
+  console.group('Developer Debug: OpenRouteService Request')
+  console.log('Provider: OpenRouteService')
+  console.log('Start Coords (lng, lat):', [from.lng, from.lat])
+  console.log('End Coords (lng, lat):', [to.lng, to.lat])
+  console.log('Profile: foot-walking')
+  console.log('Request URL:', url)
+  console.log('Request Body (Key hidden):', { ...body, api_key: 'REDACTED' })
+  console.groupEnd()
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': apiKey
+    },
+    body: JSON.stringify(body)
+  })
+
+  console.log('ORS Response Status:', res.status)
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    console.error('ORS Error Body:', errorData)
+    throw new Error(`OpenRouteService returned ${res.status}: ${errorData.error?.message || res.statusText}`)
+  }
+
+  const json = await res.json()
+  // ORS geojson returns features, each feature is a route
+  const routes = (json.features ?? []) as Array<{
+    geometry: LineString
+    properties: {
+      summary: {
+        distance: number
+        duration: number
+      }
+    }
+  }>
+
+  console.log(`ORS Found ${routes.length} routes`)
+
+  return routes.map((r, i) => {
+    const distKm = Math.round(r.properties.summary.distance / 100) / 10
+    const durMin = Math.max(1, Math.round(r.properties.summary.duration / 60))
+    
+    console.log(`Route ${i + 1}: ${distKm} km, ${durMin} min`)
+    
+    return {
+      score: 0,
+      minutes: durMin,
+      km: distKm,
+      geometry: r.geometry,
+    }
+  })
+}
+
+async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | 'label' | 'tone' | 'provider'>[]> {
   const url =
     `https://router.project-osrm.org/route/v1/foot/` +
     `${from.lng},${from.lat};${to.lng},${to.lat}` +
     `?alternatives=true&overview=full&geometries=geojson`
 
+  console.group('Developer Debug: OSRM Request')
+  console.log('Provider: OSRM (Fallback)')
+  console.log('Start Coords (lng, lat):', [from.lng, from.lat])
+  console.log('End Coords (lng, lat):', [to.lng, to.lat])
+  console.log('Profile: foot')
+  console.log('Request URL:', url)
+  console.groupEnd()
+
   const res = await fetch(url)
+  console.log('OSRM Response Status:', res.status)
+
   if (!res.ok) throw new Error(`Routing service returned ${res.status}`)
   const json = await res.json()
   if (json.code !== 'Ok') throw new Error(json.message ?? 'No route found')
@@ -192,12 +293,20 @@ async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | '
     distance: number
   }>
   
-  return raw.map(r => ({
-    score: 0, // Placeholder, will be calculated
-    minutes: Math.max(1, Math.round(r.duration / 60)),
-    km: Math.round(r.distance / 100) / 10,
-    geometry: r.geometry,
-  }))
+  console.log(`OSRM Found ${raw.length} routes`)
+
+  return raw.map((r, i) => {
+    const distKm = Math.round(r.distance / 100) / 10
+    const durMin = Math.max(1, Math.round(r.duration / 60))
+    console.log(`Route ${i + 1}: ${distKm} km, ${durMin} min`)
+
+    return {
+      score: 0,
+      minutes: durMin,
+      km: distKm,
+      geometry: r.geometry,
+    }
+  })
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -220,4 +329,3 @@ export function routesToFeatureCollection(
     })),
   }
 }
-
