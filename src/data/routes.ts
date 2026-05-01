@@ -237,15 +237,16 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
 }
 
 async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | 'label' | 'tone'>[]> {
-  // Use radiuses=100;100 to allow snapping to the nearest footway within 100m,
-  // which prevents snapping to road centers in car-heavy areas or roundabouts.
   const url =
     `https://router.project-osrm.org/route/v1/foot/` +
     `${from.lng},${from.lat};${to.lng},${to.lat}` +
-    `?alternatives=true&overview=full&geometries=geojson&radiuses=100;100`
+    `?alternatives=true&overview=full&geometries=geojson`
 
   const res = await fetch(url)
-  if (!res.ok) throw new Error(`Routing service returned ${res.status}`)
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({ message: 'Unknown error' }))
+    throw new Error(`Routing failed (${res.status}): ${errorBody.message || res.statusText}`)
+  }
   const json = await res.json()
   if (json.code !== 'Ok') throw new Error(json.message ?? 'No route found')
 
