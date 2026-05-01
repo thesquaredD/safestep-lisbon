@@ -5,32 +5,60 @@ export type SanctuaryFallback = Database['public']['Views']['sanctuary_spaces_ge
 export const FALLBACK_SANCTUARIES: SanctuaryFallback[] = [
   // --- CARCAVELOS / NOVA SBE ---
   {
-    id: 'f-1', name: 'Nova SBE Campus', kind: 'store', address: 'Rua da Holanda 1, Carcavelos',
-    description: 'Main university campus with 24/7 security presence.',
-    lat: 38.6781, lng: -9.3262, is_open_now: true, hours_text: '24/7 Security',
-    verified: false, status: 'candidate', support_offered: 'Staffed public place, wait inside, security assistance',
+    id: 'f-1', name: 'Nova SBE Campus - Main Security', kind: 'store', address: 'Rua da Holanda 1, Carcavelos',
+    description: 'Main university campus entrance with 24/7 security presence and visible lighting.',
+    lat: 38.6775, lng: -9.3255, is_open_now: true, hours_text: '24/7 Security',
+    verified: false, status: 'candidate', support_offered: 'Staffed entrance, wait inside, security assistance',
     neighborhood: 'Carcavelos', business_type: 'university', created_at: new Date().toISOString()
   },
   {
-    id: 'f-2', name: 'Pingo Doce Nova SBE', kind: 'store', address: 'Nova SBE Campus, Carcavelos',
-    description: 'Supermarket on campus. Brightly lit and staffed.',
-    lat: 38.6785, lng: -9.3255, is_open_now: true, hours_text: '08:00 — 21:00',
+    id: 'f-2', name: 'Pingo Doce Nova SBE (Entrance)', kind: 'store', address: 'Nova SBE Campus, Carcavelos',
+    description: 'Inside Nova SBE campus — use main entrance. Brightly lit and staffed supermarket.',
+    lat: 38.6780, lng: -9.3250, is_open_now: true, hours_text: '08:00 — 21:00',
     verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
     neighborhood: 'Carcavelos', business_type: 'supermarket', created_at: new Date().toISOString()
   },
   {
-    id: 'f-3', name: 'Carcavelos Train Station', kind: 'store', address: 'Praça da Estação, Carcavelos',
-    description: 'Main train station for Carcavelos. Staffed during train hours.',
+    id: 'f-3', name: 'Carcavelos Train Station (Main Entrance)', kind: 'store', address: 'Praça da Estação, Carcavelos',
+    description: 'Main train station entrance. Staffed during train hours and well-lit at night.',
     lat: 38.6824, lng: -9.3331, is_open_now: true, hours_text: '05:00 — 01:30',
-    verified: false, status: 'candidate', support_offered: 'Help arrange transport',
+    verified: false, status: 'candidate', support_offered: 'Help arrange transport, staffed public place',
     neighborhood: 'Carcavelos', business_type: 'transport hub', created_at: new Date().toISOString()
   },
   {
     id: 'f-4', name: 'Farmácia de Carcavelos', kind: 'pharmacy', address: 'Estrada da Rebelva 12, Carcavelos',
-    description: 'Local pharmacy with emergency assistance.',
+    description: 'Local pharmacy with emergency assistance and safe waiting area.',
     lat: 38.6830, lng: -9.3340, is_open_now: true, hours_text: '09:00 — 20:00',
     verified: false, status: 'candidate', support_offered: 'Call help, wait inside',
     neighborhood: 'Carcavelos', business_type: 'pharmacy', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-new-nova-1', name: 'Carcavelos Surf School Café', kind: 'cafe', address: 'Avenida Marginal, Carcavelos Beach',
+    description: 'Beach-side café with high visibility and staff presence during evening hours.',
+    lat: 38.6788, lng: -9.3355, is_open_now: true, hours_text: '09:00 — 22:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, help call transport',
+    neighborhood: 'Carcavelos', business_type: 'café', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-new-nova-2', name: 'Riviera Center Shopping', kind: 'store', address: 'Rua de Luanda, Carcavelos',
+    description: 'Shopping center with security staff and multiple open businesses.',
+    lat: 38.6835, lng: -9.3280, is_open_now: true, hours_text: '08:00 — 23:00',
+    verified: false, status: 'candidate', support_offered: 'Security presence, wait inside',
+    neighborhood: 'Carcavelos', business_type: 'shopping center', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-new-nova-3', name: 'Capricciosa Carcavelos', kind: 'cafe', address: 'Passeio Marítimo, Carcavelos',
+    description: 'Large restaurant on the Marginal, always busy and well-staffed.',
+    lat: 38.6792, lng: -9.3360, is_open_now: true, hours_text: '12:00 — 00:00',
+    verified: false, status: 'candidate', support_offered: 'Wait inside, help arrange transport',
+    neighborhood: 'Carcavelos', business_type: 'restaurant', created_at: new Date().toISOString()
+  },
+  {
+    id: 'f-new-nova-4', name: 'St. Julian\'s School Security', kind: 'store', address: 'Avenida Marginal, Carcavelos',
+    description: 'Staffed security post at the main gate of St. Julian\'s school.',
+    lat: 38.6795, lng: -9.3225, is_open_now: true, hours_text: '24/7 Security',
+    verified: false, status: 'candidate', support_offered: 'Security assistance, wait at gate',
+    neighborhood: 'Carcavelos', business_type: 'staffed public place', created_at: new Date().toISOString()
   },
 
   // --- OEIRAS / ALGÉS ---

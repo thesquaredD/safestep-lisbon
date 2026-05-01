@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import {
   Footprints, Shield, Radio, AlertTriangle,
   ChevronDown, ChevronUp, Coffee, Cross, Beer, Store, Lightbulb,
-  Compass, Loader2, MapPin as MapPinIcon,
+  Compass, Loader2, MapPin as MapPinIcon, BookOpen, X,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { MapView } from '@/components/MapView'
@@ -127,66 +127,114 @@ export function MapPage() {
           }}
         />
         <div className="absolute top-3 inset-x-3 z-10 flex flex-col gap-2">
-          <SearchBar
-            destination={to as LngLat}
-            onDestinationChange={(d) => { setTo(d); setDrawerExpanded(true) }}
-            onLegendClick={() => setShowLegend(v => !v)}
-            legendActive={showLegend}
-          />
-          
-          {/* Starting Point Selector */}
-          <div className="flex flex-col gap-1.5">
-            <button 
-              onClick={() => setIsChoosingStart(v => !v)}
-              className="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-xl text-xs font-semibold shadow-sm border border-neutral-200 w-full active:bg-neutral-50"
-            >
-              <div className="flex items-center gap-2 truncate">
-                <div className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
-                <span className="text-neutral-500 font-medium">From:</span>
-                <span className="truncate text-neutral-900">{from?.label}</span>
+          {/* Dual Input Search Area */}
+          <div className="bg-surface/98 backdrop-blur-md rounded-2xl border border-black/5 shadow-[var(--shadow-float)] overflow-hidden">
+            <div className="p-3 flex flex-col gap-2">
+              {/* Start Input */}
+              <div className="flex items-center gap-3 px-2 py-1.5 bg-neutral-50 rounded-xl border border-neutral-100 group focus-within:border-brand-200 transition">
+                <div className="w-2 h-2 rounded-full bg-brand-500 shrink-0 mx-1" />
+                <div className="flex-1 flex flex-col min-w-0">
+                  <span className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider leading-none mb-0.5">Start</span>
+                  <input
+                    type="text"
+                    readOnly
+                    onClick={() => setIsChoosingStart(true)}
+                    value={from?.label ?? ''}
+                    placeholder="Where are you starting from?"
+                    className="bg-transparent outline-none text-[13px] text-[#14101c] placeholder:text-neutral-400 cursor-pointer"
+                  />
+                </div>
+                {from?.label === 'Your Current Location' && (
+                  <Compass size={14} className="text-brand-500 animate-pulse shrink-0" />
+                )}
               </div>
-              <ChevronDown size={14} className={cn("text-neutral-400 transition", isChoosingStart && "rotate-180")} />
-            </button>
 
-            {isChoosingStart && (
-              <div className="bg-white rounded-2xl shadow-xl border border-neutral-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="p-2 grid grid-cols-1 gap-1">
-                  {QUICK_START_POINTS.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => { setFrom(p); setIsChoosingStart(false) }}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition",
-                        from?.label === p.label ? "bg-brand-50 text-brand-700 font-semibold" : "hover:bg-neutral-50 text-neutral-700"
-                      )}
-                    >
-                      <MapPinIcon size={16} className={from?.label === p.label ? "text-brand-500" : "text-neutral-400"} />
-                      {p.label}
-                    </button>
-                  ))}
-                  <div className="h-px bg-neutral-100 my-1" />
-                  <button
-                    onClick={() => {
-                      if (coords) {
-                        setFrom({ ...coords, label: 'Your Current Location' })
-                      } else {
-                        // If no GPS, we just close and maybe show a hint
-                        alert("Please enable location services in your browser settings.")
-                      }
-                      setIsChoosingStart(false)
-                    }}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left hover:bg-neutral-50 text-neutral-700"
-                  >
-                    <Compass size={16} className="text-brand-500" />
-                    <div>
-                      <p className="font-medium">Use my current location</p>
-                      <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-tight">Beta Flow</p>
-                    </div>
-                  </button>
+              {/* Destination Input */}
+              <div className="flex items-center gap-3 px-2 py-1.5 bg-neutral-50 rounded-xl border border-neutral-100 group focus-within:border-brand-200 transition">
+                <MapPinIcon size={14} className="text-rose-500 shrink-0 mx-0.5" />
+                <div className="flex-1 flex flex-col min-w-0">
+                  <span className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider leading-none mb-0.5">Destination</span>
+                  <SearchBar
+                    destination={to as LngLat}
+                    onDestinationChange={(d) => { setTo(d); setDrawerExpanded(true) }}
+                    className="p-0"
+                    isMinimal
+                  />
                 </div>
               </div>
-            )}
+            </div>
+            
+            {/* Quick Actions Bar */}
+            <div className="px-3 pb-3 flex items-center justify-between border-t border-neutral-50 pt-2">
+              <button 
+                onClick={() => setShowLegend(v => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight px-2.5 py-1 rounded-full transition",
+                  showLegend ? "bg-brand-100 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"
+                )}
+              >
+                <BookOpen size={12} /> Legend
+              </button>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsChoosingStart(true)}
+                  className="text-[10px] font-bold text-brand-600 uppercase tracking-tight hover:underline"
+                >
+                  Change Start
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* Location Picker Overlay */}
+          {isChoosingStart && (
+            <div className="bg-white rounded-2xl shadow-2xl border border-brand-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-4 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
+                <h3 className="font-bold text-brand-900 text-sm">Where are you starting?</h3>
+                <button onClick={() => setIsChoosingStart(false)} className="text-neutral-400">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="p-2 grid grid-cols-1 gap-1">
+                <button
+                  onClick={() => {
+                    if (coords) {
+                      setFrom({ ...coords, label: 'Your Current Location' })
+                      setIsChoosingStart(false)
+                    } else {
+                      alert("Please enable location services in your browser settings to use this feature.")
+                    }
+                  }}
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold"
+                >
+                  <Compass size={18} className="text-brand-500" />
+                  <div>
+                    <p>Use my current location</p>
+                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Beta GPS Flow</p>
+                  </div>
+                </button>
+                
+                <div className="px-3 pt-3 pb-1">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-widest">Quick Start Points</span>
+                </div>
+
+                {QUICK_START_POINTS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => { setFrom(p); setIsChoosingStart(false) }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition",
+                      from?.label === p.label ? "bg-brand-50 text-brand-700 font-semibold" : "hover:bg-neutral-50 text-neutral-700"
+                    )}
+                  >
+                    <MapPinIcon size={16} className={from?.label === p.label ? "text-brand-500" : "text-neutral-400"} />
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {!from && !routesLoading && (
@@ -254,29 +302,73 @@ export function MapPage() {
 function ScoreBadge({ score, tone }: { score: number; tone: 'safe' | 'warn' | 'risk' }) {
   const bg = tone === 'safe' ? 'bg-safe' : tone === 'warn' ? 'bg-warn' : 'bg-risk'
   return (
-    <span className={cn('w-10 h-10 grid place-items-center rounded-lg text-white font-bold text-sm tabular-nums', bg)}>
-      {score}
-    </span>
+    <div className="flex flex-col items-center gap-1 shrink-0">
+      <span className={cn('w-10 h-10 grid place-items-center rounded-lg text-white font-bold text-sm tabular-nums shadow-sm', bg)}>
+        {score}
+      </span>
+      <span className="text-[8px] uppercase font-bold tracking-tighter text-neutral-400">Score</span>
+    </div>
   )
+}
+
+const getScoreLabel = (score: number) => {
+  if (score >= 90) return 'Very safe route'
+  if (score >= 70) return 'Safer route'
+  if (score >= 50) return 'Moderate safety'
+  return 'Use caution'
 }
 
 function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-3 rounded-xl border p-3 text-left transition w-full',
-        active ? 'bg-brand-50 border-brand-300 shadow-sm' : 'border-neutral-200 hover:bg-neutral-50',
+    <div className="flex flex-col gap-1 w-full">
+      <button
+        onClick={onClick}
+        className={cn(
+          'flex items-center gap-3 rounded-xl border p-3 text-left transition w-full',
+          active ? 'bg-brand-50 border-brand-300 shadow-sm' : 'border-neutral-200 hover:bg-neutral-50',
+        )}
+      >
+        <ScoreBadge score={r.score} tone={r.tone} />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <div className="font-semibold text-[14px]">{r.label}</div>
+            <span className={cn(
+              "text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tight",
+              r.tone === 'safe' ? "bg-emerald-100 text-emerald-700" : r.tone === 'warn' ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"
+            )}>
+              {getScoreLabel(r.score)}
+            </span>
+          </div>
+          <div className="text-xs text-neutral-500">{r.minutes} min · {r.km} km</div>
+          {r.summary && <div className="text-[10px] text-brand-600 font-medium mt-0.5 line-clamp-1 italic">{r.summary}</div>}
+        </div>
+        <ChevronDown size={18} className={cn('text-neutral-400 transition', active && 'rotate-180 text-brand-500')} />
+      </button>
+      
+      {active && (
+        <div className="px-3 pb-3 -mt-2 pt-4 bg-white border border-t-0 border-brand-200 rounded-b-xl animate-in slide-in-from-top-2 duration-200">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-3 rounded-full bg-brand-500" />
+              <p className="text-[11px] font-bold text-neutral-900">Why this score?</p>
+            </div>
+            <p className="text-[11px] text-neutral-600 leading-relaxed pl-3 italic border-l border-neutral-100">
+              "This route has a {r.score}/100 safety rating. {r.summary}. It focuses on well-lit, active streets to maximize visibility."
+            </p>
+            <div className="flex gap-4 mt-1 pl-3">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-safe" />
+                <span className="text-[9px] text-neutral-500">Safe Spot</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-warn" />
+                <span className="text-[9px] text-neutral-500">Hazard</span>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-    >
-      <ScoreBadge score={r.score} tone={r.tone} />
-      <div className="flex-1">
-        <div className="font-semibold text-[14px]">{r.label}</div>
-        <div className="text-xs text-neutral-500">{r.minutes} min · {r.km} km</div>
-        {r.summary && <div className="text-[10px] text-brand-600 font-medium mt-0.5 line-clamp-1 italic">{r.summary}</div>}
-      </div>
-      <ChevronDown size={18} className={cn('text-neutral-400 transition', active && 'rotate-180 text-brand-500')} />
-    </button>
+    </div>
   )
 }
 

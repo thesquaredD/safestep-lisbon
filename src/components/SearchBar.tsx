@@ -17,12 +17,14 @@ export function SearchBar({
   onLegendClick,
   legendActive = false,
   className,
+  isMinimal = false,
 }: {
   destination: LngLat
   onDestinationChange: (dest: LngLat) => void
   onLegendClick?: () => void
   legendActive?: boolean
   className?: string
+  isMinimal?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -62,6 +64,74 @@ export function SearchBar({
     })
     setQuery('')
     setOpen(false)
+  }
+
+  if (isMinimal) {
+    return (
+      <div ref={wrapRef} className={cn('relative w-full', className)}>
+        {!open && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="w-full text-left text-[13px] text-[#14101c] font-medium truncate"
+          >
+            {destination.label ?? "Where to?"}
+          </button>
+        )}
+        {open && (
+          <div className="fixed inset-x-3 top-3 z-[60] bg-surface rounded-2xl border border-black/10 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 px-5 py-4">
+              <Search size={16} className="text-brand-500 shrink-0" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search destination in Lisbon..."
+                className="flex-1 bg-transparent outline-none text-[15px] font-medium placeholder:text-neutral-400"
+              />
+              {loading && <Loader2 size={14} className="text-neutral-400 animate-spin shrink-0" />}
+              <button
+                type="button"
+                onClick={() => { setOpen(false); setQuery('') }}
+                className="text-neutral-400 hover:text-neutral-700 -mr-1 w-8 h-8 rounded-full grid place-items-center hover:bg-neutral-100 transition shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            {/* Results */}
+            {hits && hits.length > 0 && (
+              <ul className="border-t border-black/5 max-h-[60vh] overflow-y-auto py-1 bg-white">
+                {hits.map(h => (
+                  <li key={h.id}>
+                    <button
+                      type="button"
+                      onClick={() => pick(h)}
+                      className="w-full flex items-start gap-4 px-5 py-3 hover:bg-brand-50/60 text-left transition border-b border-neutral-50 last:border-0"
+                    >
+                      <span className="w-8 h-8 rounded-lg bg-brand-50 grid place-items-center text-brand-600 shrink-0 mt-0.5">
+                        <MapPin size={15} />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[14px] font-semibold text-[#14101c] truncate">{h.label}</span>
+                        {h.context && <span className="block text-[12px] text-neutral-500 truncate">{h.context}</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            
+            {(!hits || hits.length === 0) && (
+              <div className="p-5 text-center text-neutral-500 text-sm bg-white border-t border-neutral-50">
+                {query.length < 2 ? "Type to search..." : "No places found."}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
