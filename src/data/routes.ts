@@ -37,6 +37,13 @@ export const ROUTE_COLORS: Record<RouteId, string> = {
 const TONES: Record<RouteId, 'safe' | 'warn' | 'risk'> = { safest: 'safe', balanced: 'warn', fastest: 'risk' }
 const LABELS: Record<RouteId, string> = { safest: 'Safest walking route', balanced: 'Balanced walking route', fastest: 'Fastest walking route' }
 
+const SCORE_LEVELS = (score: number) => {
+  if (score >= 90) return 'Very safe'
+  if (score >= 70) return 'Safer'
+  if (score >= 50) return 'Moderate'
+  return 'Use caution'
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    Utility Functions
    ─────────────────────────────────────────────────────────────────────── */
@@ -161,15 +168,17 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
           
           // Generate summary text
           const safeTotal = metrics.verifiedCount + metrics.candidateCount
-          let summary = ''
-          if (safeTotal > 0) summary += `Passes near ${safeTotal} safe spot${safeTotal === 1 ? '' : 's'}`
-          if (metrics.hazardCount > 0) summary += summary ? ` and avoids ${metrics.hazardCount} hazard${metrics.hazardCount === 1 ? '' : 's'}` : `Avoids ${metrics.hazardCount} hazard${metrics.hazardCount === 1 ? '' : 's'}`
-          if (!summary) summary = 'Direct walking path'
+          const level = SCORE_LEVELS(metrics.score)
+          
+          let why = ''
+          if (safeTotal > 0) why += `Passes near ${safeTotal} safe spot${safeTotal === 1 ? '' : 's'}`
+          if (metrics.hazardCount > 0) why += why ? ` and avoids ${metrics.hazardCount} hazard${metrics.hazardCount === 1 ? '' : 's'}` : `Avoids ${metrics.hazardCount} hazard${metrics.hazardCount === 1 ? '' : 's'}`
+          if (!why) why = 'Direct walking path'
 
           return {
             ...r,
             score: metrics.score,
-            summary: indoorNote ? `${indoorNote} ${summary}` : summary
+            summary: indoorNote ? `${indoorNote} ${level} — ${why}.` : `${level} — ${why}.`
           }
         })
 

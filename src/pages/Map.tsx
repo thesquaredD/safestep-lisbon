@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import {
   Footprints, Shield, Radio, AlertTriangle,
   ChevronDown, ChevronUp, Coffee, Cross, Beer, Store, Lightbulb,
-  Compass, Loader2, MapPin as MapPinIcon, BookOpen, X,
+  Compass, Loader2, MapPin as MapPinIcon, BookOpen, X, Search,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { MapView } from '@/components/MapView'
@@ -16,12 +16,12 @@ import {
 } from '@/data/routes'
 
 const QUICK_START_POINTS: (LngLat & { id: string })[] = [
-  { id: 'nova-sbe', lat: 38.6781, lng: -9.3262, label: 'Nova SBE Carcavelos' },
+  { id: 'nova-sbe', lat: 38.6775, lng: -9.3255, label: 'Nova SBE Carcavelos' },
   { id: 'carcavelos-st', lat: 38.6824, lng: -9.3331, label: 'Carcavelos Station' },
+  { id: 'pingo-doce', lat: 38.6780, lng: -9.3250, label: 'Pingo Doce Nova SBE' },
   { id: 'cais-sodre', lat: 38.7060, lng: -9.1445, label: 'Cais do Sodré' },
   { id: 'santos', lat: 38.7065, lng: -9.1550, label: 'Santos' },
   { id: 'lx-factory', lat: 38.7035, lng: -9.1785, label: 'LX Factory' },
-  { id: 'alcantara', lat: 38.7020, lng: -9.1760, label: 'Alcântara' },
 ]
 
 export function MapPage() {
@@ -36,7 +36,7 @@ export function MapPage() {
   // Derive initial values
   const getInitialOrigin = () => {
     if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' }
-    // Default to Nova SBE for the demo
+    // Always default to Nova SBE for the MVP demo
     return QUICK_START_POINTS[0]
   }
 
@@ -49,6 +49,13 @@ export function MapPage() {
   const [from, setFrom] = useState<LngLat | null>(getInitialOrigin())
   const [to, setTo] = useState<LngLat | null>(getInitialDestination())
   const [isChoosingStart, setIsChoosingStart] = useState(false)
+
+  // Only calculate routes if both points are clearly selected
+  const hasBothPoints = from && to && (from.lat !== to.lat || from.lng !== to.lng)
+  const { data: routes, loading: routesLoading, error: routesError } = useRoutes(
+    hasBothPoints ? from : null, 
+    hasBothPoints ? to : null
+  )
 
   // Sync if URL change
   useEffect(() => {
@@ -64,7 +71,6 @@ export function MapPage() {
   const [selectedId, setSelectedId] = useState<RouteId>('safest')
   const [showLegend, setShowLegend] = useState(false)
   const [drawerExpanded, setDrawerExpanded] = useState(true)
-  const { data: routes, loading: routesLoading, error: routesError } = useRoutes(from, to)
 
   // If the chosen route disappears (e.g. fewer alternatives returned) fall back.
   const routeById = (id: RouteId) => routes?.find(r => r.id === id)
@@ -86,13 +92,100 @@ export function MapPage() {
         />
 
         {/* Floating search */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[520px] z-20">
-          <SearchBar
-            destination={to as LngLat}
-            onDestinationChange={setTo}
-            onLegendClick={() => setShowLegend(v => !v)}
-            legendActive={showLegend}
-          />
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[520px] z-20 flex flex-col gap-2">
+          <div className="bg-surface/98 backdrop-blur-md rounded-2xl border border-black/5 shadow-[var(--shadow-float)] overflow-hidden">
+            <div className="p-3 flex items-center gap-3">
+              {/* Start Input (Desktop) */}
+              <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-100 cursor-pointer" onClick={() => setIsChoosingStart(true)}>
+                <div className="w-2 h-2 rounded-full bg-brand-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-tight leading-none mb-0.5">Start</p>
+                  <p className="text-[13px] text-[#14101c] font-medium truncate">{from?.label ?? 'Choose start...'}</p>
+                </div>
+              </div>
+              
+              <div className="w-px h-8 bg-neutral-200" />
+
+              {/* Destination Input (Desktop) */}
+              <div className="flex-[1.5] flex flex-col min-w-0">
+                <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-tight leading-none mb-0.5 ml-1">Destination</p>
+                <SearchBar
+                  destination={to as LngLat}
+                  onDestinationChange={setTo}
+                  className="p-0"
+                  isMinimal
+                  placeholder="Where to?"
+                />
+              </div>
+              
+              <button 
+                onClick={() => setShowLegend(v => !v)}
+                className={cn(
+                  "p-2 rounded-xl transition",
+                  showLegend ? "bg-brand-100 text-brand-700" : "text-neutral-400 hover:bg-neutral-100"
+                )}
+                title="Legend"
+              >
+                <BookOpen size={20} />
+              </button>
+            </div>
+          </div>
+
+          {/* Location Picker Overlay (Desktop) */}
+          {isChoosingStart && (
+            <div className="bg-white rounded-2xl shadow-2xl border border-brand-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-4 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
+                <h3 className="font-bold text-brand-900 text-sm">Choose starting point</h3>
+                <button onClick={() => setIsChoosingStart(false)} className="text-neutral-400 p-1 hover:bg-black/5 rounded-full transition">
+                  <X size={18} />
+                </button>
+              </div>
+              
+              <div className="p-3 border-b border-neutral-100">
+                <SearchBar
+                  destination={from as LngLat}
+                  onDestinationChange={(d) => { setFrom(d); setIsChoosingStart(false) }}
+                  className="p-0 shadow-none border-neutral-200 bg-neutral-50 rounded-xl"
+                  isMinimal
+                  placeholder="Search start address..."
+                />
+              </div>
+
+              <div className="p-2 grid grid-cols-2 gap-1 max-h-[40vh] overflow-y-auto">
+                <button
+                  onClick={() => {
+                    if (coords) {
+                      setFrom({ ...coords, label: 'Your Current Location' })
+                      setIsChoosingStart(false)
+                    } else {
+                      alert("Please enable location services in your browser settings.")
+                    }
+                  }}
+                  className="col-span-2 flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold hover:bg-brand-50 transition"
+                >
+                  <Compass size={18} className="text-brand-500" />
+                  <div>
+                    <p>Use my current location</p>
+                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Beta GPS Flow</p>
+                  </div>
+                </button>
+                
+                {QUICK_START_POINTS.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => { setFrom(p); setIsChoosingStart(false) }}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-left transition",
+                      from?.label === p.label ? "bg-brand-50 text-brand-700 font-semibold" : "hover:bg-neutral-50 text-neutral-700"
+                    )}
+                  >
+                    <MapPinIcon size={14} className={from?.label === p.label ? "text-brand-500" : "text-neutral-400"} />
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <ActionMenu from={from} />
@@ -103,6 +196,7 @@ export function MapPage() {
           error={routesError}
           selectedId={selectedIdSafe}
           onSelect={setSelectedId}
+          toSet={!!to}
         />
 
         {showLegend && <LegendCard onClose={() => setShowLegend(false)} />}
@@ -294,6 +388,7 @@ export function MapPage() {
               error={routesError}
               selectedId={selectedIdSafe}
               onSelect={setSelectedId}
+              toSet={!!to}
             />
             <div className="grid grid-cols-4 gap-2 mt-4">
               <ActionChip to="/walk"     icon={Footprints}     label="Walk" from={from} />
@@ -405,14 +500,28 @@ function RouteOptionsHeader() {
 }
 
 function RouteList({
-  routes, loading, error, selectedId, onSelect,
+  routes, loading, error, selectedId, onSelect, toSet
 }: {
   routes: Route[] | null
   loading: boolean
   error: string | null
   selectedId: RouteId
   onSelect: (id: RouteId) => void
+  toSet: boolean
 }) {
+  if (!toSet) {
+    return (
+      <div className="py-8 flex flex-col items-center text-center gap-3">
+        <div className="w-12 h-12 bg-brand-50 rounded-2xl grid place-items-center text-brand-500">
+          <Search size={24} />
+        </div>
+        <div>
+          <p className="font-bold text-neutral-900">Where are you going?</p>
+          <p className="text-xs text-neutral-500 max-w-[200px] mx-auto">Select a destination to find the safest walking routes for students.</p>
+        </div>
+      </div>
+    )
+  }
   if (error) {
     return (
       <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm p-3">
@@ -488,13 +597,14 @@ function ActionMenu({ from }: { from?: LngLat | null }) {
    ───────────────────────────────────────────────────────────────────────── */
 
 function RouteOptionsCard({
-  routes, loading, error, selectedId, onSelect,
+  routes, loading, error, selectedId, onSelect, toSet
 }: {
   routes: Route[] | null
   loading: boolean
   error: string | null
   selectedId: RouteId
   onSelect: (id: RouteId) => void
+  toSet: boolean
 }) {
   return (
     <div className="absolute bottom-6 right-6 z-10 w-[340px]">
@@ -512,6 +622,7 @@ function RouteOptionsCard({
           error={error}
           selectedId={selectedId}
           onSelect={onSelect}
+          toSet={toSet}
         />
       </div>
     </div>
