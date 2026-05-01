@@ -35,7 +35,7 @@ export const ROUTE_COLORS: Record<RouteId, string> = {
 }
 
 const TONES: Record<RouteId, 'safe' | 'warn' | 'risk'> = { safest: 'safe', balanced: 'warn', fastest: 'risk' }
-const LABELS: Record<RouteId, string> = { safest: 'Safest', balanced: 'Balanced', fastest: 'Fastest' }
+const LABELS: Record<RouteId, string> = { safest: 'Safest walking route', balanced: 'Balanced walking route', fastest: 'Fastest walking route' }
 
 /* ─────────────────────────────────────────────────────────────────────────
    Utility Functions
@@ -152,6 +152,9 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
       .then(([routes, data]) => {
         if (cancelled) return
 
+        const isIndoorTo = to.label?.toLowerCase().includes('inside') || to.label?.toLowerCase().includes('entrance')
+        const indoorNote = isIndoorTo ? "This place is inside a campus/building — route shown to nearest pedestrian entrance." : null
+
         // Calculate real safety metrics for each alternative
         const scoredRoutes = routes.map(r => {
           const metrics = calculateSafetyMetrics(r.geometry, data.sanctuaries, data.hazards)
@@ -166,7 +169,7 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
           return {
             ...r,
             score: metrics.score,
-            summary
+            summary: indoorNote ? `${indoorNote} ${summary}` : summary
           }
         })
 
@@ -234,10 +237,12 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
 }
 
 async function fetchOsrm(from: LngLat, to: LngLat): Promise<Omit<Route, 'id' | 'label' | 'tone'>[]> {
+  // Use radiuses=100;100 to allow snapping to the nearest footway within 100m,
+  // which prevents snapping to road centers in car-heavy areas or roundabouts.
   const url =
     `https://router.project-osrm.org/route/v1/foot/` +
     `${from.lng},${from.lat};${to.lng},${to.lat}` +
-    `?alternatives=true&overview=full&geometries=geojson`
+    `?alternatives=true&overview=full&geometries=geojson&radiuses=100;100`
 
   const res = await fetch(url)
   if (!res.ok) throw new Error(`Routing service returned ${res.status}`)
