@@ -1,17 +1,37 @@
-# React + TypeScript + Vite
+# SafeStep — Lisbon Women's Safety Navigation
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SafeStep is a women's safety navigation web app for Lisbon, built by NOVA SBE students. It provides pedestrian routing prioritized by safety features, well-lit streets, and verified "Safe Spots" (sanctuaries).
 
-Currently, two official plugins are available:
+## Walking routing setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+SafeStep uses **OpenRouteService (ORS)** foot-walking for real, high-quality pedestrian routes. To enable this locally:
 
-## React Compiler
+1.  **Get an API key:** Register for a free account and get an API key at [https://openrouteservice.org/](https://openrouteservice.org/).
+2.  **Create a local environment file:** Create a file called `.env.local` in the project root directory.
+3.  **Add your key:** Add the following line to the file:
+    ```
+    VITE_ORS_API_KEY=your_openrouteservice_key_here
+    ```
+4.  **Restart the app:** If the dev server is already running, restart it to load the new key:
+    ```bash
+    pnpm dev
+    ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Important Notes
+- **Security:** Do NOT commit `.env.local` to GitHub. It is already included in `.gitignore`.
+- **Fallback:** If the API key is missing, the app will automatically use the **Prototype fallback route (OSRM)** and display a visible warning in the route selection list.
+- **Production:** For Vercel deployments, `VITE_ORS_API_KEY` must be added to the project's Environment Variables by the project owner.
 
-## Expanding the ESLint configuration
+## Development
+
+```bash
+pnpm dev                 # Start local development server
+pnpm build               # Type-check and build for production
+pnpm db:types            # Regenerate database types from Supabase
+```
+
+## React + TypeScript + Vite
+... (rest of the template content)
 
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
