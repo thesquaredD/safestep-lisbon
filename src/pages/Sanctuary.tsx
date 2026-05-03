@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router'
-import { Coffee, Cross, Beer, Store, Search, X, MapPin, Phone, Clock as ClockIcon, Navigation } from 'lucide-react'
+import { Coffee, Cross, Beer, Store, X, MapPin, Phone, Clock as ClockIcon, Navigation } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 
@@ -50,11 +50,28 @@ export function SanctuaryPage() {
       .sort((a, b) => a.distanceM - b.distanceM)
   }, [data, filter, origin])
 
+  // Automatically select nearest if mode is 'nearest'
+  useEffect(() => {
+    if (list.length > 0 && !selected && searchParams.get('mode') === 'nearest') {
+      setSelected(list[0])
+    }
+  }, [list, selected, searchParams])
+
+  const originLabel = lat && lng ? "your selected start" : "Lisbon center"
+
   return (
-    <div className="p-4 flex flex-col gap-4 relative min-h-full">
-      <div>
-        <h1 className="text-xl font-bold">Sanctuary Network</h1>
-        <p className="text-sm text-neutral-500">Vetted safe spaces near you</p>
+    <div className="p-4 flex flex-col gap-4 relative min-h-full pb-20">
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight">Sanctuary Network</h1>
+          <p className="text-[11px] text-neutral-500 font-medium uppercase tracking-wider">Distances from {originLabel}</p>
+        </div>
+        <button 
+          onClick={() => navigate('/map')}
+          className="px-3 py-1 rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 uppercase tracking-tight hover:bg-brand-100 transition"
+        >
+          Change Start
+        </button>
       </div>
 
       <div className="flex items-center gap-2">
@@ -62,8 +79,11 @@ export function SanctuaryPage() {
         <Chip active={filter === 'open'} onClick={() => setFilter('open')}>Open Now</Chip>
       </div>
 
-      <button className="flex items-center justify-center gap-2 rounded-full bg-brand-500 text-white py-3 font-semibold shadow-lg shadow-brand-500/30">
-        <Search size={16} /> Find Nearest Sanctuary Space
+      <button 
+        onClick={() => { if (list.length > 0) setSelected(list[0]) }}
+        className="flex items-center justify-center gap-2 rounded-2xl bg-brand-600 text-white py-4 font-bold shadow-lg shadow-brand-500/20 active:scale-[0.98] transition"
+      >
+        <Navigation size={18} /> Find Nearest Safe Space
       </button>
 
       {error && (

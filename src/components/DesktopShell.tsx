@@ -11,7 +11,7 @@ export function DesktopShell() {
   return (
     <div className="h-svh flex bg-surface-2 text-[15px]">
       <Sidebar />
-      <main className="flex-1 relative overflow-hidden">
+      <main className="flex-1 relative overflow-y-auto">
         <Outlet />
       </main>
     </div>
