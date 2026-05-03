@@ -175,6 +175,7 @@ function renderable(
       : s.kind === 'bar' ? Beer
       : Store
     const label = labelForSanctuaryKind(s.kind)
+    const statusText = s.status === 'candidate' ? 'Candidate Safe Spot' : 'Verified Sanctuary'
     return {
       lng: s.lng, lat: s.lat, offset: 22,
       icon: Icon,
@@ -182,10 +183,10 @@ function renderable(
       accent: '#7c3aed',
       title: s.name ?? 'Sanctuary',
       eyebrow: label,
-      tag: s.is_open_now ? 'Open now' : 'Closed',
-      tagClass: s.is_open_now
-        ? 'bg-emerald-50 text-emerald-700'
-        : 'bg-neutral-100 text-neutral-500',
+      tag: statusText,
+      tagClass: s.status === 'candidate' 
+        ? 'bg-amber-100 text-amber-700' 
+        : 'bg-brand-100 text-brand-700',
       address: s.address ?? undefined,
       body: s.description ?? undefined,
       cta: {

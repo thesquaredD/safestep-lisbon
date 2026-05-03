@@ -1,6 +1,9 @@
-import { Outlet, NavLink } from 'react-router'
-import { Map as MapIcon, Shield, Radio, AlertTriangle, User, Sparkles } from 'lucide-react'
+import { Outlet, NavLink, Link } from 'react-router'
+import { Map as MapIcon, Shield, Radio, AlertTriangle, User, Sparkles, Siren, X, Phone, User as UserIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/cn'
+
+const CONTACT_KEY = 'safestep:emergency_contact'
 
 /**
  * Desktop shell: ink-purple sidebar (88px) on the left, full-bleed main on the right.
@@ -8,12 +11,99 @@ import { cn } from '@/lib/cn'
  * pages may opt-in to a centered container themselves.
  */
 export function DesktopShell() {
+  const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
+  const [contact, setContact] = useState<{ name: string; phone: string } | null>(null)
+
+  // Sync contact when emergency modal opens
+  useEffect(() => {
+    if (isEmergencyOpen) {
+      const saved = localStorage.getItem(CONTACT_KEY)
+      setContact(saved ? JSON.parse(saved) : null)
+    }
+  }, [isEmergencyOpen])
+
   return (
     <div className="h-svh flex bg-surface-2 text-[15px]">
-      <Sidebar />
+      <Sidebar onSOS={() => setIsEmergencyOpen(true)} />
       <main className="flex-1 relative overflow-y-auto">
         <Outlet />
       </main>
+
+      {/* Emergency Modal (Shared logic with mobile) */}
+      {isEmergencyOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 grid place-items-center">
+                  <AlertTriangle size={24} />
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight text-neutral-900">Emergency</h2>
+              </div>
+              <button 
+                onClick={() => setIsEmergencyOpen(false)}
+                className="w-10 h-10 rounded-full bg-neutral-100 grid place-items-center text-neutral-500 hover:bg-neutral-200 transition"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <a 
+                href="tel:112"
+                className="flex items-center justify-between p-5 rounded-2xl bg-risk text-white shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-[0.98] transition"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 grid place-items-center">
+                    <Phone size={24} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-xl leading-none">Call 112</p>
+                    <p className="text-red-100 text-sm mt-1">Police & Emergency</p>
+                  </div>
+                </div>
+              </a>
+
+              {contact ? (
+                <a 
+                  href={`tel:${contact.phone}`}
+                  className="flex items-center justify-between p-5 rounded-2xl bg-brand-600 text-white shadow-lg shadow-brand-500/20 hover:scale-[1.02] active:scale-[0.98] transition"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 grid place-items-center">
+                      <UserIcon size={24} />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-xl leading-none">Call {contact.name}</p>
+                      <p className="text-brand-100 text-sm mt-1">Emergency Contact</p>
+                    </div>
+                  </div>
+                </a>
+              ) : (
+                <Link 
+                  to="/profile" 
+                  onClick={() => setIsEmergencyOpen(false)}
+                  className="flex items-center justify-between p-5 rounded-2xl border-2 border-dashed border-neutral-200 text-neutral-500 hover:border-brand-200 hover:text-brand-600 transition"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-neutral-50 grid place-items-center">
+                      <UserIcon size={24} />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-bold text-lg leading-none">Add Emergency Contact</p>
+                      <p className="text-xs mt-1 text-neutral-400">Set this up in your Profile</p>
+                    </div>
+                  </div>
+                </Link>
+              )}
+            </div>
+
+            <p className="text-center text-xs text-neutral-400 mt-8 leading-relaxed">
+              SafeStep is a prototype. In a real emergency, always call local authorities immediately.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -26,7 +116,7 @@ const navItems = [
   { to: '/profile',   label: 'Profile',   icon: User },
 ]
 
-function Sidebar() {
+function Sidebar({ onSOS }: { onSOS: () => void }) {
   return (
     // The grain texture pseudo-element + a soft radial gradient give the dark rail
     // depth without using an image asset.
@@ -88,6 +178,17 @@ function Sidebar() {
               </NavLink>
             </li>
           ))}
+          
+          {/* Global SOS Button in Desktop Sidebar */}
+          <li className="mt-4 px-2">
+            <button
+              onClick={onSOS}
+              className="w-10 h-10 mx-auto rounded-xl bg-risk text-white grid place-items-center shadow-lg shadow-red-500/30 hover:scale-105 active:scale-95 transition-all"
+              title="Emergency SOS"
+            >
+              <Siren size={18} className="animate-pulse" />
+            </button>
+          </li>
         </ul>
       </nav>
 

@@ -116,12 +116,19 @@ export function SanctuaryPage() {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold truncate">{s.name}</h3>
                   <span className={cn(
-                    'text-xs px-2 py-0.5 rounded-full',
-                    s.is_open_now ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500',
-                  )}>{s.is_open_now ? 'Open' : 'Closed'}</span>
+                    'text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tight',
+                    s.status === 'candidate' ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700',
+                  )}>{s.status === 'candidate' ? 'Candidate' : 'Verified'}</span>
                 </div>
-                <p className="text-xs text-neutral-500">{s.address} · {s.distanceM}m</p>
-                <p className="text-xs text-neutral-600 mt-1 line-clamp-2">{s.description}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className={cn(
+                    'text-[10px] font-bold uppercase tracking-wider',
+                    s.is_open_now ? 'text-emerald-600' : 'text-neutral-400',
+                  )}>{s.is_open_now ? 'Open Now' : 'Closed'}</span>
+                  <span className="text-[10px] text-neutral-300">•</span>
+                  <p className="text-[10px] text-neutral-500 font-medium truncate">{s.address} · {s.distanceM}m</p>
+                </div>
+                <p className="text-xs text-neutral-600 mt-1.5 line-clamp-1 italic">{s.description}</p>
               </div>
             </li>
           )
@@ -138,10 +145,16 @@ export function SanctuaryPage() {
                   {(() => { const Icon = iconFor(selected.kind!); return <Icon size={24} /> })()}
                 </span>
                 <div>
-                  <h2 className="text-xl font-bold leading-tight">{selected.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold leading-tight">{selected.name}</h2>
+                    <span className={cn(
+                      'text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider',
+                      selected.status === 'candidate' ? 'bg-amber-100 text-amber-700' : 'bg-brand-100 text-brand-700',
+                    )}>{selected.status === 'candidate' ? 'Candidate' : 'Verified'}</span>
+                  </div>
                   <span className={cn(
-                    'text-xs px-2 py-0.5 rounded-full font-medium inline-block mt-1',
-                    selected.is_open_now ? 'bg-emerald-50 text-emerald-700' : 'bg-neutral-100 text-neutral-500',
+                    'text-[11px] font-bold uppercase tracking-widest inline-block mt-1',
+                    selected.is_open_now ? 'text-emerald-600' : 'text-neutral-400',
                   )}>{selected.is_open_now ? 'Open Now' : 'Closed'}</span>
                 </div>
               </div>

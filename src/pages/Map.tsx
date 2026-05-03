@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import {
   Footprints, Shield, Radio, AlertTriangle,
   ChevronDown, ChevronUp, Coffee, Cross, Beer, Store, Lightbulb,
-  Compass, Loader2, MapPin as MapPinIcon, BookOpen, X, Search,
+  Compass, Loader2, MapPin as MapPinIcon, BookOpen, X, Search, Info
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { MapView } from '@/components/MapView'
@@ -25,7 +25,7 @@ const QUICK_START_POINTS: (LngLat & { id: string })[] = [
 ]
 
 export function MapPage() {
-  const { coords } = useLocation()
+  const { coords, status: locationStatus } = useLocation()
   const [searchParams] = useSearchParams()
   const urlLat = searchParams.get('lat')
   const urlLng = searchParams.get('lng')
@@ -34,21 +34,38 @@ export function MapPage() {
   const toLabel = searchParams.get('toLabel')
 
   // Derive initial values
+  // Mandate: "use current location if enabled, otherwise use selected/manual Start point"
   const getInitialOrigin = () => {
     if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' }
-    // Always default to Nova SBE for the MVP demo
-    return QUICK_START_POINTS[0]
+    if (coords) return { ...coords, label: 'Your Current Location' }
+    return QUICK_START_POINTS[0] // Fallback if no GPS
   }
 
   const getInitialDestination = () => {
     if (toLat && toLng) return { lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' }
-    return DEFAULT_DESTINATION
+    return null // Start empty to encourage search
   }
 
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const [from, setFrom] = useState<LngLat | null>(getInitialOrigin())
   const [to, setTo] = useState<LngLat | null>(getInitialDestination())
   const [isChoosingStart, setIsChoosingStart] = useState(false)
+  const [drawerExpanded, setDrawerExpanded] = useState(true)
+
+  // Sync if URL change or GPS enabled
+  useEffect(() => {
+    if (urlLat && urlLng) {
+      setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
+    } else if (coords && (!from || from.label === QUICK_START_POINTS[0].label)) {
+      // Auto-set if GPS becomes available and we're just on the default fallback
+      setFrom({ ...coords, label: 'Your Current Location' })
+    }
+    
+    if (toLat && toLng) {
+      setTo({ lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' })
+      setDrawerExpanded(true) // Auto-expand when destination provided via URL
+    }
+  }, [urlLat, urlLng, toLat, toLng, toLabel, coords])
 
   // Only calculate routes if both points are clearly selected
   const hasBothPoints = from && to && (from.lat !== to.lat || from.lng !== to.lng)
@@ -62,20 +79,8 @@ export function MapPage() {
     hasBothPoints ? to : null
   )
 
-  // Sync if URL change
-  useEffect(() => {
-    if (urlLat && urlLng) {
-      setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
-    }
-    
-    if (toLat && toLng) {
-      setTo({ lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' })
-    }
-  }, [urlLat, urlLng, toLat, toLng, toLabel])
-
   const [selectedId, setSelectedId] = useState<RouteId>('safest')
   const [showLegend, setShowLegend] = useState(false)
-  const [drawerExpanded, setDrawerExpanded] = useState(true)
 
   // If the chosen route disappears (e.g. fewer alternatives returned) fall back.
   const routeById = (id: RouteId) => routes?.find(r => r.id === id)
@@ -193,7 +198,7 @@ export function MapPage() {
           )}
         </div>
 
-        <ActionMenu from={from} />
+        <ActionMenu from={from} destination={to} />
 
         <RouteOptionsCard
           routes={routes}
@@ -278,12 +283,24 @@ export function MapPage() {
                 <BookOpen size={12} /> Legend
               </button>
               
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                {/* Location Status Bar (Mobile Inline) */}
+                <div className={cn(
+                  "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-tight transition shadow-sm border",
+                  locationStatus === 'success' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
+                )}>
+                  {locationStatus === 'success' ? (
+                    <><MapPinIcon size={10} /> GPS On</>
+                  ) : (
+                    <><Info size={10} /> GPS Off</>
+                  )}
+                </div>
+
                 <button 
                   onClick={() => setIsChoosingStart(true)}
                   className="flex items-center gap-1 px-3 py-1 bg-brand-50 text-brand-700 rounded-lg text-[10px] font-bold uppercase tracking-tight hover:bg-brand-100 transition shadow-sm border border-brand-100"
                 >
-                  <MapPinIcon size={10} /> Choose starting point
+                  <MapPinIcon size={10} /> Change Start
                 </button>
               </div>
             </div>
@@ -398,7 +415,7 @@ export function MapPage() {
               provider={routingProvider}
             />
             <div className="grid grid-cols-4 gap-2 mt-4">
-              <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} />
+              <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} destination={to} />
               <ActionChip to="/sanctuary" icon={Shield}         label="Sanctuary" from={from} />
               <ActionChip to="/mesh"       icon={Radio}          label="Mesh"      from={from} />
               <ActionChip to="/audit"      icon={AlertTriangle}  label="Report"    from={from} />
@@ -487,13 +504,16 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
   )
 }
 
-function ActionChip({ to, icon: Icon, label, from }: { to: string; icon: React.ElementType; label: string; from?: LngLat | null }) {
+function ActionChip({ to, icon: Icon, label, from, destination }: { to: string; icon: React.ElementType; label: string; from?: LngLat | null; destination?: LngLat | null }) {
   let url = from ? `${to}?lat=${from.lat}&lng=${from.lng}` : to
   if (to === '/sanctuary') {
     url += (url.includes('?') ? '&' : '?') + 'mode=nearest'
   }
+  if (to === '/walk' && destination) {
+    url += (url.includes('?') ? '&' : '?') + `toLat=${destination.lat}&toLng=${destination.lng}&toLabel=${encodeURIComponent(destination.label ?? 'Destination')}`
+  }
   return (
-    <Link to={url} className="flex flex-col items-center gap-1 rounded-xl bg-brand-50 py-2.5 text-xs text-brand-700 hover:bg-brand-100 transition">
+    <Link to={url} className="flex flex-col items-center gap-1 rounded-xl bg-brand-50 py-2.5 text-xs text-brand-700 hover:bg-brand-100 transition border border-brand-100/50">
       <Icon size={18} />
       {label}
     </Link>
@@ -594,10 +614,12 @@ function RouteList({
    Desktop-only — Action menu (top-left floating)
    ───────────────────────────────────────────────────────────────────────── */
 
-function ActionMenu({ from }: { from?: LngLat | null }) {
+function ActionMenu({ from, destination }: { from?: LngLat | null, destination?: LngLat | null }) {
   const params = from ? `?lat=${from.lat}&lng=${from.lng}` : ''
+  const destParams = destination ? `${params ? '&' : '?'}toLat=${destination.lat}&toLng=${destination.lng}&toLabel=${encodeURIComponent(destination.label ?? 'Destination')}` : ''
+
   const items: { to: string; icon: React.ElementType; label: string; sub: string }[] = [
-    { to: `/walk${params}`,                       icon: Footprints,     label: 'Start Walk',       sub: 'Begin guided navigation' },
+    { to: `/walk${params}${destParams}`,                       icon: Footprints,     label: 'Start Walk',       sub: 'Begin guided navigation' },
     { to: `/sanctuary${params}${params ? '&' : '?'}mode=nearest`, icon: Shield,         label: 'Nearest Sanctuary', sub: 'Vetted safe places nearby' },
     { to: `/mesh${params}`,                       icon: Radio,          label: 'Guardian Mesh',     sub: 'Anonymous BLE network' },
     { to: `/audit${params}`,                      icon: AlertTriangle,  label: 'Report Hazard',     sub: 'Streetlight, blocked path…' },

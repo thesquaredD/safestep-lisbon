@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { AlertTriangle, Clock, Lightbulb, Construction, Eye, AlertCircle, Plus, X, MapPin, Send, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, Clock, Lightbulb, Construction, Eye, AlertCircle, Plus, X, MapPin, Send, CheckCircle2, Compass } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useHazards, type Hazard } from '@/data/hazards'
 import { useLocation } from '@/lib/useLocation'
@@ -48,8 +48,8 @@ export function AuditPage() {
   // Form State
   const [form, setForm] = useState({
     kind: 'broken_light' as NonNullable<Hazard['kind']>,
-    locationMode: (lat && lng) ? 'current' : 'manual' as 'current' | 'manual',
-    useCurrentLocation: !!(lat && lng),
+    locationMode: (lat && lng) ? 'start' : 'manual' as 'current' | 'manual' | 'start',
+    useCurrentLocation: false,
     note: '',
     anonymous: true
   })
@@ -202,6 +202,25 @@ export function AuditPage() {
                       <p className="text-[10px] text-neutral-500 uppercase tracking-tight">Best for live reports</p>
                     </div>
                   </button>
+
+                  {lat && lng && (
+                    <button
+                      type="button"
+                      onClick={() => setForm(s => ({ ...s, locationMode: 'start', useCurrentLocation: false }))}
+                      className={cn(
+                        "flex items-center gap-3 p-4 rounded-2xl border text-left transition-all",
+                        form.locationMode === 'start' ? "bg-brand-50 border-brand-300 ring-1 ring-brand-300" : "bg-white border-neutral-200"
+                      )}
+                    >
+                      <div className={cn("w-8 h-8 rounded-lg grid place-items-center shadow-sm", form.locationMode === 'start' ? "bg-brand-500 text-white" : "bg-neutral-50 text-neutral-400")}>
+                        <Compass size={16} />
+                      </div>
+                      <div>
+                        <p className={cn("text-sm font-bold leading-tight", form.locationMode === 'start' ? "text-brand-900" : "text-neutral-900")}>Use selected Start point</p>
+                        <p className="text-[10px] text-neutral-500 uppercase tracking-tight">Report hazard at your start</p>
+                      </div>
+                    </button>
+                  )}
 
                   <button
                     type="button"
