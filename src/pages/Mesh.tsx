@@ -42,19 +42,26 @@ export function MeshPage() {
 
       <Card>
         <h3 className="font-semibold">Emergency Signal</h3>
-        <p className="text-xs text-neutral-500 mb-3">
+        <p className="text-xs text-neutral-500 mb-4">
           Send an emergency signal that bounces between phones in internet dead zones using mesh relay.
         </p>
         <button
           disabled={!enabled}
           className={cn(
-            'w-full flex items-center justify-center gap-2 rounded-xl py-3 font-semibold',
-            enabled ? 'bg-risk text-white' : 'bg-neutral-100 text-neutral-400',
+            'w-full flex items-center justify-center gap-2 rounded-xl py-4 font-bold transition-all',
+            enabled 
+              ? 'bg-risk text-white shadow-lg shadow-red-500/20 active:scale-[0.98]' 
+              : 'bg-neutral-100 text-neutral-400',
           )}
         >
-          <Send size={16} /> Send Emergency Signal
+          <Send size={16} /> Send Signal
         </button>
-        {!enabled && <p className="text-xs text-neutral-400 mt-2">Enable Guardian Mesh to send signals</p>}
+        {enabled && (
+          <p className="text-[10px] text-center text-neutral-400 mt-3 uppercase tracking-widest font-medium">
+            Coming soon — Guardian Mesh prototype
+          </p>
+        )}
+        {!enabled && <p className="text-xs text-neutral-400 mt-2">Enable Guardian Mesh to prepare signals</p>}
       </Card>
     </div>
   )

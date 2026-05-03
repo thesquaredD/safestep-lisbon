@@ -48,6 +48,7 @@ export function AuditPage() {
   // Form State
   const [form, setForm] = useState({
     kind: 'broken_light' as NonNullable<Hazard['kind']>,
+    locationMode: (lat && lng) ? 'current' : 'manual' as 'current' | 'manual',
     useCurrentLocation: !!(lat && lng),
     note: '',
     anonymous: true
@@ -179,22 +180,54 @@ export function AuditPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white grid place-items-center text-brand-500 shadow-sm">
-                    <MapPin size={16} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-neutral-900 leading-tight">Location</p>
-                    <p className="text-xs text-neutral-500">{lat && lng ? 'Current location detected' : 'Choose on map'}</p>
-                  </div>
+              <div className="space-y-3">
+                <label className="block text-sm font-bold text-neutral-900 ml-1">Location</label>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (coords) setForm(s => ({ ...s, locationMode: 'current', useCurrentLocation: true }))
+                      else alert("Please enable location services.")
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 p-4 rounded-2xl border text-left transition-all",
+                      form.locationMode === 'current' ? "bg-brand-50 border-brand-300 ring-1 ring-brand-300" : "bg-white border-neutral-200"
+                    )}
+                  >
+                    <div className={cn("w-8 h-8 rounded-lg grid place-items-center shadow-sm", form.locationMode === 'current' ? "bg-brand-500 text-white" : "bg-neutral-50 text-neutral-400")}>
+                      <MapPin size={16} />
+                    </div>
+                    <div>
+                      <p className={cn("text-sm font-bold leading-tight", form.locationMode === 'current' ? "text-brand-900" : "text-neutral-900")}>Use current location</p>
+                      <p className="text-[10px] text-neutral-500 uppercase tracking-tight">Best for live reports</p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setForm(s => ({ ...s, locationMode: 'manual', useCurrentLocation: false }))}
+                    className={cn(
+                      "flex items-center gap-3 p-4 rounded-2xl border text-left transition-all",
+                      form.locationMode === 'manual' ? "bg-brand-50 border-brand-300 ring-1 ring-brand-300" : "bg-white border-neutral-200"
+                    )}
+                  >
+                    <div className={cn("w-8 h-8 rounded-lg grid place-items-center shadow-sm", form.locationMode === 'manual' ? "bg-brand-500 text-white" : "bg-neutral-50 text-neutral-400")}>
+                      <Plus size={16} />
+                    </div>
+                    <div>
+                      <p className={cn("text-sm font-bold leading-tight", form.locationMode === 'manual' ? "text-brand-900" : "text-neutral-900")}>Type location manually</p>
+                      <p className="text-[10px] text-neutral-500 uppercase tracking-tight">Specify address or landmark</p>
+                    </div>
+                  </button>
                 </div>
-                <input 
-                  type="checkbox"
-                  checked={form.useCurrentLocation}
-                  onChange={(e) => setForm(s => ({ ...s, useCurrentLocation: e.target.checked }))}
-                  className="w-5 h-5 accent-brand-600 rounded"
-                />
+
+                {form.locationMode === 'manual' && (
+                  <input 
+                    type="text"
+                    placeholder="Enter location (e.g. Rua de São José)"
+                    className="w-full px-4 py-3 rounded-xl bg-neutral-50 border border-neutral-200 text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all mt-1 animate-in slide-in-from-top-2 duration-200"
+                  />
+                )}
               </div>
 
               <div>

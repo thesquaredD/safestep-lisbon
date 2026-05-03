@@ -1,12 +1,22 @@
 import { Link } from 'react-router'
+import { MessageSquareShare } from 'lucide-react'
 
 export function Header() {
   return (
-    <header className="flex items-center justify-center gap-2 py-3 border-b border-neutral-200 bg-white">
+    <header className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-white">
+      <div className="w-10 md:hidden" /> {/* Spacer for centering logo on mobile */}
       <Link to="/" className="flex items-center gap-1.5">
         <Logo />
         <span className="font-bold text-brand-600 tracking-tight text-lg">AFESTEP</span>
       </Link>
+      <button 
+        onClick={() => window.location.href = 'mailto:hello@safestep.io?subject=SafeStep Feedback'}
+        className="flex items-center gap-1.5 text-neutral-400 hover:text-brand-600 transition"
+        title="Give feedback"
+      >
+        <MessageSquareShare size={20} />
+        <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">Feedback</span>
+      </button>
     </header>
   )
 }

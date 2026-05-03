@@ -398,10 +398,10 @@ export function MapPage() {
               provider={routingProvider}
             />
             <div className="grid grid-cols-4 gap-2 mt-4">
-              <ActionChip to="/walk"     icon={Footprints}     label="Walk" from={from} />
+              <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} />
               <ActionChip to="/sanctuary" icon={Shield}         label="Sanctuary" from={from} />
-              <ActionChip to="/mesh"      icon={Radio}          label="Mesh" from={from} />
-              <ActionChip to="/audit"     icon={AlertTriangle}  label="Report" from={from} />
+              <ActionChip to="/mesh"       icon={Radio}          label="Mesh"      from={from} />
+              <ActionChip to="/audit"      icon={AlertTriangle}  label="Report"    from={from} />
             </div>
           </div>
         )}
@@ -488,7 +488,10 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
 }
 
 function ActionChip({ to, icon: Icon, label, from }: { to: string; icon: React.ElementType; label: string; from?: LngLat | null }) {
-  const url = from ? `${to}?lat=${from.lat}&lng=${from.lng}` : to
+  let url = from ? `${to}?lat=${from.lat}&lng=${from.lng}` : to
+  if (to === '/sanctuary') {
+    url += (url.includes('?') ? '&' : '?') + 'mode=nearest'
+  }
   return (
     <Link to={url} className="flex flex-col items-center gap-1 rounded-xl bg-brand-50 py-2.5 text-xs text-brand-700 hover:bg-brand-100 transition">
       <Icon size={18} />
@@ -594,10 +597,10 @@ function RouteList({
 function ActionMenu({ from }: { from?: LngLat | null }) {
   const params = from ? `?lat=${from.lat}&lng=${from.lng}` : ''
   const items: { to: string; icon: React.ElementType; label: string; sub: string }[] = [
-    { to: `/walk${params}`,      icon: Footprints,     label: 'Start Walk',       sub: 'Begin guided navigation' },
-    { to: `/sanctuary${params}`, icon: Shield,         label: 'Nearest Sanctuary', sub: 'Vetted safe places nearby' },
-    { to: `/mesh${params}`,      icon: Radio,          label: 'Guardian Mesh',     sub: 'Anonymous BLE network' },
-    { to: `/audit${params}`,     icon: AlertTriangle,  label: 'Report Hazard',     sub: 'Streetlight, blocked path…' },
+    { to: `/walk${params}`,                       icon: Footprints,     label: 'Start Walk',       sub: 'Begin guided navigation' },
+    { to: `/sanctuary${params}${params ? '&' : '?'}mode=nearest`, icon: Shield,         label: 'Nearest Sanctuary', sub: 'Vetted safe places nearby' },
+    { to: `/mesh${params}`,                       icon: Radio,          label: 'Guardian Mesh',     sub: 'Anonymous BLE network' },
+    { to: `/audit${params}`,                      icon: AlertTriangle,  label: 'Report Hazard',     sub: 'Streetlight, blocked path…' },
   ]
   return (
     <div className="absolute top-20 left-4 z-10 w-[260px]">

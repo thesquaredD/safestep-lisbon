@@ -21,7 +21,8 @@ export function HomePage() {
         navigate(`/map${queryString}`)
         break
       case 'sanctuary':
-        navigate(`/sanctuary${queryString}`)
+        const mode = params.toString() ? '&mode=nearest' : '?mode=nearest'
+        navigate(`/sanctuary${queryString}${mode}`)
         break
       case 'report':
         navigate(`/audit${queryString}`)
