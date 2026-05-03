@@ -51,6 +51,7 @@ export function MapPage() {
   const [to, setTo] = useState<LngLat | null>(getInitialDestination())
   const [isChoosingStart, setIsChoosingStart] = useState(false)
   const [drawerExpanded, setDrawerExpanded] = useState(true)
+  const [searchTrigger, setSearchTrigger] = useState(0)
 
   // Sync if URL change or GPS enabled
   useEffect(() => {
@@ -125,6 +126,7 @@ export function MapPage() {
                   className="p-0"
                   isMinimal
                   placeholder="Where to?"
+                  triggerOpen={searchTrigger}
                 />
               </div>
               
@@ -208,6 +210,7 @@ export function MapPage() {
           onSelect={setSelectedId}
           toSet={!!to}
           provider={routingProvider}
+          onSearchClick={() => setSearchTrigger(v => v + 1)}
         />
 
         {showLegend && <LegendCard onClose={() => setShowLegend(false)} />}
@@ -266,6 +269,7 @@ export function MapPage() {
                     onDestinationChange={(d) => { setTo(d); setDrawerExpanded(true) }}
                     className="p-0"
                     isMinimal
+                    triggerOpen={searchTrigger}
                   />
                 </div>
               </div>
@@ -413,6 +417,7 @@ export function MapPage() {
               onSelect={setSelectedId}
               toSet={!!to}
               provider={routingProvider}
+              onSearchClick={() => setSearchTrigger(v => v + 1)}
             />
             <div className="grid grid-cols-4 gap-2 mt-4">
               <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} destination={to} />
@@ -505,7 +510,7 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
 }
 
 function ActionChip({ to, icon: Icon, label, from, destination }: { to: string; icon: React.ElementType; label: string; from?: LngLat | null; destination?: LngLat | null }) {
-  let url = from ? `${to}?lat=${from.lat}&lng=${from.lng}` : to
+  let url = from ? `${to}?lat=${from.lat}&lng=${from.lng}&fromLabel=${encodeURIComponent(from.label ?? '')}` : to
   if (to === '/sanctuary') {
     url += (url.includes('?') ? '&' : '?') + 'mode=nearest'
   }
@@ -546,7 +551,7 @@ function RouteOptionsHeader({ provider }: { provider: string }) {
 }
 
 function RouteList({
-  routes, loading, error, selectedId, onSelect, toSet, provider
+  routes, loading, error, selectedId, onSelect, toSet, provider, onSearchClick
 }: {
   routes: Route[] | null
   loading: boolean
@@ -555,18 +560,22 @@ function RouteList({
   onSelect: (id: RouteId) => void
   toSet: boolean
   provider: string
+  onSearchClick?: () => void
 }) {
   if (!toSet) {
     return (
-      <div className="py-8 flex flex-col items-center text-center gap-3">
-        <div className="w-12 h-12 bg-brand-50 rounded-2xl grid place-items-center text-brand-500">
+      <button 
+        onClick={onSearchClick}
+        className="w-full py-8 flex flex-col items-center text-center gap-3 bg-neutral-50/50 border-2 border-dashed border-neutral-100 rounded-2xl hover:bg-brand-50/50 hover:border-brand-100 transition-all"
+      >
+        <div className="w-12 h-12 bg-brand-50 rounded-2xl grid place-items-center text-brand-500 shadow-sm">
           <Search size={24} />
         </div>
         <div>
           <p className="font-bold text-neutral-900">Where are you going?</p>
-          <p className="text-xs text-neutral-500 max-w-[200px] mx-auto">Select a destination to find the safest walking routes for students.</p>
+          <p className="text-xs text-neutral-500 max-w-[200px] mx-auto leading-relaxed">Select a destination to find the safest walking routes for students.</p>
         </div>
-      </div>
+      </button>
     )
   }
   if (error) {
@@ -615,7 +624,7 @@ function RouteList({
    ───────────────────────────────────────────────────────────────────────── */
 
 function ActionMenu({ from, destination }: { from?: LngLat | null, destination?: LngLat | null }) {
-  const params = from ? `?lat=${from.lat}&lng=${from.lng}` : ''
+  const params = from ? `?lat=${from.lat}&lng=${from.lng}&fromLabel=${encodeURIComponent(from.label ?? '')}` : ''
   const destParams = destination ? `${params ? '&' : '?'}toLat=${destination.lat}&toLng=${destination.lng}&toLabel=${encodeURIComponent(destination.label ?? 'Destination')}` : ''
 
   const items: { to: string; icon: React.ElementType; label: string; sub: string }[] = [
@@ -657,7 +666,7 @@ function ActionMenu({ from, destination }: { from?: LngLat | null, destination?:
    ───────────────────────────────────────────────────────────────────────── */
 
 function RouteOptionsCard({
-  routes, loading, error, selectedId, onSelect, toSet, provider
+  routes, loading, error, selectedId, onSelect, toSet, provider, onSearchClick
 }: {
   routes: Route[] | null
   loading: boolean
@@ -666,6 +675,7 @@ function RouteOptionsCard({
   onSelect: (id: RouteId) => void
   toSet: boolean
   provider: string
+  onSearchClick?: () => void
 }) {
   return (
     <div className="absolute bottom-6 right-6 z-10 w-[340px]">
@@ -695,6 +705,7 @@ function RouteOptionsCard({
           onSelect={onSelect}
           toSet={toSet}
           provider={provider}
+          onSearchClick={onSearchClick}
         />
       </div>
     </div>

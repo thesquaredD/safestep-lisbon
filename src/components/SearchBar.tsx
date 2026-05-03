@@ -19,6 +19,7 @@ export function SearchBar({
   className,
   isMinimal = false,
   placeholder = "Where to in Lisbon?",
+  triggerOpen = 0,
 }: {
   destination: LngLat
   onDestinationChange: (dest: LngLat) => void
@@ -27,12 +28,18 @@ export function SearchBar({
   className?: string
   isMinimal?: boolean
   placeholder?: string
+  triggerOpen?: number
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const { data: hits, loading } = useGeocode(query)
+
+  // External trigger to open
+  useEffect(() => {
+    if (triggerOpen > 0) setOpen(true)
+  }, [triggerOpen])
 
   // Close on outside click
   useEffect(() => {

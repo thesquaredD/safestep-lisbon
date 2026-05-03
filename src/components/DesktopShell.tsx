@@ -1,5 +1,5 @@
 import { Outlet, NavLink, Link } from 'react-router'
-import { Map as MapIcon, Shield, Radio, AlertTriangle, User, Sparkles, Siren, X, Phone, User as UserIcon } from 'lucide-react'
+import { Map as MapIcon, Shield, Radio, AlertTriangle, User, Sparkles, Siren, X, Phone, User as UserIcon, MessageSquareShare } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/cn'
 
@@ -187,6 +187,17 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
               title="Emergency SOS"
             >
               <Siren size={18} className="animate-pulse" />
+            </button>
+          </li>
+
+          {/* Feedback Button in Desktop Sidebar */}
+          <li className="mt-2 px-2">
+            <button
+              onClick={() => window.location.href = 'mailto:hello@safestep.io?subject=SafeStep Feedback'}
+              className="w-10 h-10 mx-auto rounded-xl bg-white/[0.04] text-white/50 grid place-items-center hover:bg-white/[0.08] hover:text-white transition-all"
+              title="Give Feedback"
+            >
+              <MessageSquareShare size={18} />
             </button>
           </li>
         </ul>

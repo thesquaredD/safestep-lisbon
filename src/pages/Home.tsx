@@ -12,8 +12,9 @@ export function HomePage() {
     if (coords) {
       params.set('lat', String(coords.lat))
       params.set('lng', String(coords.lng))
+      params.set('fromLabel', 'Your Current Location')
     }
-    
+
     const queryString = params.toString() ? `?${params.toString()}` : ''
 
     switch (type) {

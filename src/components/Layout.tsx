@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate, Link } from 'react-router'
 import { useEffect, useState } from 'react'
-import { Siren, Phone, X, User as UserIcon, AlertTriangle } from 'lucide-react'
+import { Siren, Phone, X, User as UserIcon, AlertTriangle, MessageSquareShare } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { Header } from './Header'
 import { DesktopShell } from './DesktopShell'
@@ -54,12 +54,26 @@ export function Layout() {
             onClick={() => setIsEmergencyOpen(true)}
             className={cn(
               "fixed left-4 z-40 w-14 h-14 rounded-full bg-risk text-white grid place-items-center shadow-lg shadow-red-500/40 active:scale-90 transition-transform",
-              // Adjust position if we're on a page with a specific bottom drawer
               (isMapPage || isWalkPage) ? "bottom-24" : "bottom-20"
             )}
             aria-label="Emergency SOS"
           >
             <Siren size={28} className="animate-pulse" />
+          </button>
+        )}
+
+        {/* Global Feedback Button (Mobile Floating) */}
+        {showSOS && (
+          <button
+            onClick={() => window.location.href = 'mailto:hello@safestep.io?subject=SafeStep Feedback'}
+            className={cn(
+              "fixed right-4 z-40 w-12 h-12 rounded-full bg-neutral-900 text-white grid place-items-center shadow-lg shadow-black/20 active:scale-90 transition-transform",
+              (isMapPage || isWalkPage) ? "bottom-24" : "bottom-20"
+            )}
+            aria-label="Give Feedback"
+            title="Give Feedback"
+          >
+            <MessageSquareShare size={20} />
           </button>
         )}
       </main>

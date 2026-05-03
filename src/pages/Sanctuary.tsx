@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router'
-import { Coffee, Cross, Beer, Store, X, MapPin, Phone, Clock as ClockIcon, Navigation } from 'lucide-react'
+import { Coffee, Cross, Beer, Store, X, MapPin, Phone, Clock as ClockIcon, Navigation, Info } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 
@@ -36,7 +36,10 @@ export function SanctuaryPage() {
   const navigate = useNavigate()
   const lat = searchParams.get('lat')
   const lng = searchParams.get('lng')
-  const origin = lat && lng ? { lat: Number(lat), lng: Number(lng) } : DEFAULT_ORIGIN
+  const fromLabel = searchParams.get('fromLabel')
+  
+  const hasOrigin = !!(lat && lng)
+  const origin = hasOrigin ? { lat: Number(lat), lng: Number(lng) } : DEFAULT_ORIGIN
 
   const [filter, setFilter] = useState<'all' | 'open'>('all')
   const [selected, setSelected] = useState<Sanctuary & { distanceM: number } | null>(null)
@@ -52,27 +55,38 @@ export function SanctuaryPage() {
 
   // Automatically select nearest if mode is 'nearest'
   useEffect(() => {
-    if (list.length > 0 && !selected && searchParams.get('mode') === 'nearest') {
+    if (list.length > 0 && !selected && searchParams.get('mode') === 'nearest' && hasOrigin) {
       setSelected(list[0])
     }
-  }, [list, selected, searchParams])
+  }, [list, selected, searchParams, hasOrigin])
 
-  const originLabel = lat && lng ? "your selected start" : "Lisbon center"
+  const originText = fromLabel ? fromLabel : (hasOrigin ? 'your location' : 'Lisbon center')
 
   return (
     <div className="p-4 flex flex-col gap-4 relative min-h-full pb-20">
       <div className="flex justify-between items-start">
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold tracking-tight">Sanctuary Network</h1>
-          <p className="text-[11px] text-neutral-500 font-medium uppercase tracking-wider">Distances from {originLabel}</p>
+          <p className="text-[11px] text-neutral-500 font-bold uppercase tracking-wider mt-0.5 truncate">
+            Nearest from: <span className="text-brand-600">{originText}</span>
+          </p>
         </div>
         <button 
           onClick={() => navigate('/map')}
-          className="px-3 py-1 rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 uppercase tracking-tight hover:bg-brand-100 transition"
+          className="shrink-0 px-3 py-1.5 rounded-full bg-brand-50 text-[10px] font-bold text-brand-600 uppercase tracking-tight hover:bg-brand-100 transition border border-brand-100/50"
         >
           Change Start
         </button>
       </div>
+
+      {!hasOrigin && (
+        <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start gap-3">
+          <Info size={18} className="text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-amber-800 leading-relaxed font-medium">
+            Showing defaults from Lisbon center. To find places near you, <strong>choose a starting point</strong> on the map first.
+          </p>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <Chip active={filter === 'all'} onClick={() => setFilter('all')}>All</Chip>
@@ -80,7 +94,14 @@ export function SanctuaryPage() {
       </div>
 
       <button 
-        onClick={() => { if (list.length > 0) setSelected(list[0]) }}
+        onClick={() => { 
+          if (!hasOrigin) {
+            alert("Please choose a starting point on the map first to find the absolute nearest space.")
+            navigate('/map')
+            return
+          }
+          if (list.length > 0) setSelected(list[0]) 
+        }}
         className="flex items-center justify-center gap-2 rounded-2xl bg-brand-600 text-white py-4 font-bold shadow-lg shadow-brand-500/20 active:scale-[0.98] transition"
       >
         <Navigation size={18} /> Find Nearest Safe Space
