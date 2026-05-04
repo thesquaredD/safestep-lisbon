@@ -289,7 +289,7 @@ export function AuditPage() {
               </div>
 
               <p className="text-[10px] text-neutral-400 leading-relaxed italic border-t border-neutral-100 pt-3">
-                Prototype note: feedback and reports are saved locally on this device. In the next version, they will be synced to the SafeStep database.
+                Prototype note: this report is visible on this device. Shared reports for all users require database sync.
               </p>
 
               <button 

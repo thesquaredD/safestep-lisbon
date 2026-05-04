@@ -199,16 +199,19 @@ export function MapPage() {
               </div>
 
               <div className="p-2 grid grid-cols-2 gap-1 max-h-[40vh] overflow-y-auto">
-                <button
-                  onClick={handleUseCurrentLocation}
-                  className="col-span-2 flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold hover:bg-brand-50 transition"
-                >
-                  <Compass size={18} className="text-brand-500" />
-                  <div>
-                    <p>{locationStatus === 'success' ? 'Location Enabled' : 'Use my current location'}</p>
-                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
-                  </div>
-                </button>
+                {/* Issue 1: Only show 'Use current location' if it's not already the active origin or if GPS is not yet active */}
+                {(from?.label !== 'Your Current Location' || locationStatus !== 'success') && (
+                  <button
+                    onClick={handleUseCurrentLocation}
+                    className="col-span-2 flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold hover:bg-brand-50 transition"
+                  >
+                    <Compass size={18} className="text-brand-500" />
+                    <div>
+                      <p>Use my current location</p>
+                      <p className="text-[10px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
+                    </div>
+                  </button>
+                )}
                 
                 {QUICK_START_POINTS.map(p => (
                   <button
@@ -230,16 +233,18 @@ export function MapPage() {
 
         <ActionMenu from={from} destination={to} />
 
-        <RouteOptionsCard
-          routes={routes}
-          loading={routesLoading}
-          error={routesError}
-          selectedId={selectedIdSafe}
-          onSelect={setSelectedId}
-          toSet={!!to}
-          provider={routingProvider}
-          onSearchClick={() => setSearchTrigger(v => v + 1)}
-        />
+        {to && (
+          <RouteOptionsCard
+            routes={routes}
+            loading={routesLoading}
+            error={routesError}
+            selectedId={selectedIdSafe}
+            onSelect={setSelectedId}
+            toSet={!!to}
+            provider={routingProvider}
+            onSearchClick={() => setSearchTrigger(v => v + 1)}
+          />
+        )}
 
         {showLegend && <LegendCard onClose={() => setShowLegend(false)} />}
       </div>
@@ -417,31 +422,44 @@ export function MapPage() {
       </div>
 
       <div className="bg-white border-t border-neutral-200 flex flex-col overflow-hidden">
-        <button
-          onClick={() => setDrawerExpanded(v => !v)}
-          className="py-2 flex flex-col items-center text-neutral-400 hover:text-neutral-600"
-          aria-label={drawerExpanded ? 'Collapse route options' : 'Expand route options'}
-        >
-          <span className="w-10 h-1 bg-neutral-300 rounded-full" aria-hidden="true" />
-          <span className="text-xs mt-1 inline-flex items-center gap-1">
-            {drawerExpanded ? <>Hide <ChevronDown size={12} /></> : <>Route Options <ChevronUp size={12} /></>}
-          </span>
-        </button>
+        {to ? (
+          <>
+            <button
+              onClick={() => setDrawerExpanded(v => !v)}
+              className="py-2 flex flex-col items-center text-neutral-400 hover:text-neutral-600"
+              aria-label={drawerExpanded ? 'Collapse route options' : 'Expand route options'}
+            >
+              <span className="w-10 h-1 bg-neutral-300 rounded-full" aria-hidden="true" />
+              <span className="text-xs mt-1 inline-flex items-center gap-1">
+                {drawerExpanded ? <>Hide <ChevronDown size={12} /></> : <>Route Options <ChevronUp size={12} /></>}
+              </span>
+            </button>
 
-        {drawerExpanded && (
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <RouteOptionsHeader provider={routingProvider} />
-            <RouteList
-              routes={routes}
-              loading={routesLoading}
-              error={routesError}
-              selectedId={selectedIdSafe}
-              onSelect={setSelectedId}
-              toSet={!!to}
-              provider={routingProvider}
-              onSearchClick={() => setSearchTrigger(v => v + 1)}
-            />
-            <div className="grid grid-cols-4 gap-2 mt-4">
+            {drawerExpanded && (
+              <div className="flex-1 overflow-y-auto px-4 pb-4">
+                <RouteOptionsHeader provider={routingProvider} />
+                <RouteList
+                  routes={routes}
+                  loading={routesLoading}
+                  error={routesError}
+                  selectedId={selectedIdSafe}
+                  onSelect={setSelectedId}
+                  toSet={!!to}
+                  provider={routingProvider}
+                  onSearchClick={() => setSearchTrigger(v => v + 1)}
+                />
+                <div className="grid grid-cols-4 gap-2 mt-4">
+                  <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} destination={to} />
+                  <ActionChip to="/sanctuary" icon={Shield}         label="Sanctuary" from={from} />
+                  <ActionChip to="/mesh"       icon={Radio}          label="Mesh"      from={from} />
+                  <ActionChip to="/audit"      icon={AlertTriangle}  label="Report"    from={from} />
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="px-4 py-4 pb-6">
+            <div className="grid grid-cols-4 gap-2">
               <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} destination={to} />
               <ActionChip to="/sanctuary" icon={Shield}         label="Sanctuary" from={from} />
               <ActionChip to="/mesh"       icon={Radio}          label="Mesh"      from={from} />
