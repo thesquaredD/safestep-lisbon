@@ -20,6 +20,7 @@ export function Layout() {
   const location = useLocation()
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const [contact, setContact] = useState<{ name: string; phone: string } | null>(null)
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export function Layout() {
     }
   }, [isEmergencyOpen])
 
-  if (isDesktop) return <DesktopShell />
+  if (isDesktop) return <DesktopShell onFeedback={() => setIsFeedbackOpen(true)} />
 
   const isMapPage = location.pathname === '/map'
   const isWalkPage = location.pathname === '/walk'
@@ -44,7 +45,7 @@ export function Layout() {
 
   return (
     <div className="phone-frame flex flex-col h-svh bg-surface overflow-hidden relative">
-      <Header />
+      <Header onFeedback={() => setIsFeedbackOpen(true)} />
       <main className="flex-1 overflow-y-auto relative">
         <Outlet />
         
@@ -65,7 +66,7 @@ export function Layout() {
         {/* Global Feedback Button (Mobile Floating) */}
         {showSOS && (
           <button
-            onClick={() => window.location.href = 'mailto:hello@safestep.io?subject=SafeStep Feedback'}
+            onClick={() => setIsFeedbackOpen(true)}
             className={cn(
               "fixed right-4 z-40 w-12 h-12 rounded-full bg-neutral-900 text-white grid place-items-center shadow-lg shadow-black/20 active:scale-90 transition-transform",
               (isMapPage || isWalkPage) ? "bottom-24" : "bottom-20"
@@ -78,6 +79,11 @@ export function Layout() {
         )}
       </main>
       <BottomNav />
+
+      {/* Feedback Modal */}
+      {isFeedbackOpen && (
+        <FeedbackModal onClose={() => setIsFeedbackOpen(false)} />
+      )}
 
       {/* Emergency Modal */}
       {isEmergencyOpen && (
@@ -158,3 +164,138 @@ export function Layout() {
   )
 }
 
+
+const FEEDBACK_KEY = 'safestep:local_feedback'
+
+function FeedbackModal({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    confused: '',
+    useful: '',
+    nightUse: 'maybe' as 'yes' | 'maybe' | 'no',
+    comments: ''
+  })
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const existingRaw = localStorage.getItem(FEEDBACK_KEY)
+    const existing = existingRaw ? JSON.parse(existingRaw) : []
+    const newFeedback = { ...form, id: Date.now(), created_at: new Date().toISOString() }
+    localStorage.setItem(FEEDBACK_KEY, JSON.stringify([newFeedback, ...existing]))
+    setSubmitted(true)
+  }
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/60 backdrop-blur-md p-4 sm:items-center">
+      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold tracking-tight">Give feedback</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-neutral-100 grid place-items-center text-neutral-500 hover:bg-neutral-200 transition">
+            <X size={18} />
+          </button>
+        </div>
+
+        {submitted ? (
+          <div className="py-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full grid place-items-center mx-auto">
+              <UserIcon size={32} />
+            </div>
+            <h3 className="text-lg font-bold">Thank you!</h3>
+            <p className="text-sm text-neutral-600 leading-relaxed">
+              Your feedback was saved on this device for the prototype.
+            </p>
+            <button 
+              onClick={onClose}
+              className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold shadow-lg active:scale-[0.98] transition"
+            >
+              Close
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Name</label>
+                <input 
+                  type="text" required value={form.name} onChange={e => setForm(s => ({ ...s, name: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Email (Optional)</label>
+                <input 
+                  type="email" value={form.email} onChange={e => setForm(s => ({ ...s, email: e.target.value }))}
+                  className="w-full px-4 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">What confused you?</label>
+              <textarea 
+                required value={form.confused} onChange={e => setForm(s => ({ ...s, confused: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500 min-h-[60px]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">What felt useful?</label>
+              <textarea 
+                required value={form.useful} onChange={e => setForm(s => ({ ...s, useful: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500 min-h-[60px]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Would you use this at night?</label>
+              <div className="grid grid-cols-3 gap-2">
+                {['yes', 'maybe', 'no'].map(val => (
+                  <button
+                    key={val} type="button"
+                    onClick={() => setForm(s => ({ ...s, nightUse: val as any }))}
+                    className={cn(
+                      "py-2 rounded-xl border text-xs font-bold capitalize transition-all",
+                      form.nightUse === val ? "bg-brand-500 border-brand-500 text-white shadow-sm" : "bg-neutral-50 border-neutral-100 text-neutral-600"
+                    )}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Any other comments?</label>
+              <textarea 
+                value={form.comments} onChange={e => setForm(s => ({ ...s, comments: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500 min-h-[60px]"
+              />
+            </div>
+
+            <p className="text-[10px] text-neutral-400 leading-relaxed italic border-t border-neutral-100 pt-3">
+              Prototype note: feedback and reports are saved locally on this device. In the next version, they will be synced to the SafeStep database.
+            </p>
+
+            <div className="pt-2 space-y-3">
+              <button 
+                type="submit"
+                className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-500/20 active:scale-[0.98] transition"
+              >
+                Submit Feedback
+              </button>
+              <button 
+                type="button"
+                onClick={() => window.location.href = 'mailto:safestep.information@gmail.com?subject=SafeStep feedback / collaboration'}
+                className="w-full text-xs font-bold text-brand-600 hover:text-brand-700 transition"
+              >
+                Want to help us improve? Contact us
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -10,7 +10,7 @@ const CONTACT_KEY = 'safestep:emergency_contact'
  * The main area has NO max-width on Map, so the map can go corner-to-corner. Other
  * pages may opt-in to a centered container themselves.
  */
-export function DesktopShell() {
+export function DesktopShell({ onFeedback }: { onFeedback: () => void }) {
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
   const [contact, setContact] = useState<{ name: string; phone: string } | null>(null)
 
@@ -24,7 +24,7 @@ export function DesktopShell() {
 
   return (
     <div className="h-svh flex bg-surface-2 text-[15px]">
-      <Sidebar onSOS={() => setIsEmergencyOpen(true)} />
+      <Sidebar onSOS={() => setIsEmergencyOpen(true)} onFeedback={onFeedback} />
       <main className="flex-1 relative overflow-y-auto">
         <Outlet />
       </main>
@@ -116,10 +116,8 @@ const navItems = [
   { to: '/profile',   label: 'Profile',   icon: User },
 ]
 
-function Sidebar({ onSOS }: { onSOS: () => void }) {
+function Sidebar({ onSOS, onFeedback }: { onSOS: () => void; onFeedback: () => void }) {
   return (
-    // The grain texture pseudo-element + a soft radial gradient give the dark rail
-    // depth without using an image asset.
     <aside
       className={cn(
         'relative w-[88px] shrink-0 flex flex-col items-stretch py-5',
@@ -130,12 +128,10 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
           'radial-gradient(120% 60% at 0% 0%, rgba(124,58,237,0.28), transparent 60%), radial-gradient(80% 50% at 100% 100%, rgba(124,58,237,0.12), transparent 60%)',
       }}
     >
-      {/* Wordmark — Fraunces is the editorial accent that signals craft. */}
       <div className="px-3 pb-6">
         <Wordmark />
       </div>
 
-      {/* Vertical nav */}
       <nav aria-label="Primary" className="flex-1 nav-stagger">
         <ul className="flex flex-col gap-1 px-2">
           {navItems.map((item, i) => (
@@ -154,7 +150,6 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
               >
                 {({ isActive }) => (
                   <>
-                    {/* Active pill — left rail accent. Subtle, not a slab. */}
                     <span
                       className={cn(
                         'absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full transition-all',
@@ -179,7 +174,6 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
             </li>
           ))}
           
-          {/* Global SOS Button in Desktop Sidebar */}
           <li className="mt-4 px-2">
             <button
               onClick={onSOS}
@@ -190,10 +184,9 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
             </button>
           </li>
 
-          {/* Feedback Button in Desktop Sidebar */}
           <li className="mt-2 px-2">
             <button
-              onClick={() => window.location.href = 'mailto:hello@safestep.io?subject=SafeStep Feedback'}
+              onClick={onFeedback}
               className="w-10 h-10 mx-auto rounded-xl bg-white/[0.04] text-white/50 grid place-items-center hover:bg-white/[0.08] hover:text-white transition-all"
               title="Give Feedback"
             >
@@ -203,8 +196,6 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
         </ul>
       </nav>
 
-      {/* Footer — minimal. The dark rail itself carries the manifesto tone;
-          a verbose card would only look squeezed in the 88px width. */}
       <div className="pt-4 pb-2 px-3 flex flex-col items-center gap-1.5">
         <Sparkles size={12} className="text-brand-300/80" />
         <p

@@ -14,6 +14,7 @@ import {
   AlertTriangle, Lightbulb, Construction, Eye, AlertCircle,
   Navigation, MapPin as MapPinIcon,
 } from 'lucide-react'
+import { cn } from '@/lib/cn'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 import { useHazards, type Hazard } from '@/data/hazards'
 import {
@@ -261,7 +262,9 @@ export function MapView({
         {hazards?.map(h => {
           if (h.lat == null || h.lng == null) return null
           const Icon = hazardIconFor(h.kind)
+          const isPending = h.status === 'new'
           const tone = h.status === 'resolved' ? 'bg-safe' : 'bg-warn'
+          
           return (
             <Marker
               key={h.id}
@@ -271,7 +274,11 @@ export function MapView({
               <button
                 type="button"
                 aria-label={h.title ?? 'Hazard'}
-                className={`cursor-pointer block w-7 h-7 rounded-full ${tone} grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300`}
+                className={cn(
+                  'cursor-pointer block w-7 h-7 rounded-full grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300',
+                  tone,
+                  isPending && 'animate-pulse ring-amber-400 ring-offset-2'
+                )}
               >
                 <Icon size={13} />
               </button>

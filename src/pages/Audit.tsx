@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { AlertTriangle, Clock, Lightbulb, Construction, Eye, AlertCircle, Plus, X, MapPin, Send, CheckCircle2, Compass } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { useHazards, type Hazard } from '@/data/hazards'
+import { useHazards, type Hazard, saveLocalHazard } from '@/data/hazards'
 import { useLocation } from '@/lib/useLocation'
 
 const iconFor = (k: Hazard['kind']) =>
@@ -41,7 +41,7 @@ export function AuditPage() {
   const lat = searchParams.get('lat') || coords?.lat
   const lng = searchParams.get('lng') || coords?.lng
 
-  const { data, loading, error } = useHazards()
+  const { data, loading, error, refresh } = useHazards()
   const [isReporting, setIsReporting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   
@@ -56,9 +56,18 @@ export function AuditPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Mock submission
+    
+    saveLocalHazard({
+      kind: form.kind,
+      title: kindLabels[form.kind],
+      description: form.note || 'No additional details provided.',
+      lat: form.locationMode === 'current' ? (coords?.lat ?? null) : (form.locationMode === 'start' ? Number(searchParams.get('lat')) : null),
+      lng: form.locationMode === 'current' ? (coords?.lng ?? null) : (form.locationMode === 'start' ? Number(searchParams.get('lng')) : null),
+    })
+
     setIsReporting(false)
     setIsSubmitted(true)
+    refresh()
     setTimeout(() => setIsSubmitted(false), 5000)
   }
 
@@ -278,6 +287,10 @@ export function AuditPage() {
                   )} />
                 </button>
               </div>
+
+              <p className="text-[10px] text-neutral-400 leading-relaxed italic border-t border-neutral-100 pt-3">
+                Prototype note: feedback and reports are saved locally on this device. In the next version, they will be synced to the SafeStep database.
+              </p>
 
               <button 
                 type="submit"
