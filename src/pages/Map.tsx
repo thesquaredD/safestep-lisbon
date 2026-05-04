@@ -24,6 +24,8 @@ const QUICK_START_POINTS: (LngLat & { id: string })[] = [
   { id: 'lx-factory', lat: 38.7035, lng: -9.1785, label: 'LX Factory' },
 ]
 
+const ACTIVE_START_KEY = 'safestep:active_start'
+
 export function MapPage() {
   const { coords, status: locationStatus } = useLocation()
   const [searchParams] = useSearchParams()
@@ -34,16 +36,24 @@ export function MapPage() {
   const toLabel = searchParams.get('toLabel')
 
   // Derive initial values
-  // Mandate: "use current location if enabled, otherwise use selected/manual Start point"
   const getInitialOrigin = () => {
+    // 1. URL params (direct navigation/routing)
     if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' }
+    
+    // 2. Persisted active start
+    const saved = localStorage.getItem(ACTIVE_START_KEY)
+    if (saved) return JSON.parse(saved) as LngLat
+
+    // 3. Live GPS
     if (coords) return { ...coords, label: 'Your Current Location' }
-    return QUICK_START_POINTS[0] // Fallback if no GPS
+    
+    // 4. Default fallback
+    return QUICK_START_POINTS[0]
   }
 
   const getInitialDestination = () => {
     if (toLat && toLng) return { lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' }
-    return null // Start empty to encourage search
+    return null
   }
 
   const isDesktop = useMediaQuery('(min-width: 768px)')
@@ -52,21 +62,39 @@ export function MapPage() {
   const [isChoosingStart, setIsChoosingStart] = useState(false)
   const [drawerExpanded, setDrawerExpanded] = useState(true)
   const [searchTrigger, setSearchTrigger] = useState(0)
+  const [mapCenter, setMapCenter] = useState<LngLat | null>(null)
+
+  // Persist "from" whenever it changes
+  useEffect(() => {
+    if (from) {
+      localStorage.setItem(ACTIVE_START_KEY, JSON.stringify(from))
+    }
+  }, [from])
 
   // Sync if URL change or GPS enabled
   useEffect(() => {
     if (urlLat && urlLng) {
       setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
     } else if (coords && (!from || from.label === QUICK_START_POINTS[0].label)) {
-      // Auto-set if GPS becomes available and we're just on the default fallback
       setFrom({ ...coords, label: 'Your Current Location' })
     }
     
     if (toLat && toLng) {
       setTo({ lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' })
-      setDrawerExpanded(true) // Auto-expand when destination provided via URL
+      setDrawerExpanded(true)
     }
   }, [urlLat, urlLng, toLat, toLng, toLabel, coords])
+
+  const handleUseCurrentLocation = () => {
+    if (coords) {
+      const newFrom = { ...coords, label: 'Your Current Location' }
+      setFrom(newFrom)
+      setMapCenter({ ...coords })
+      setIsChoosingStart(false)
+    } else {
+      alert("Please enable location services in your browser settings to use this feature.")
+    }
+  }
 
   // Only calculate routes if both points are clearly selected
   const hasBothPoints = from && to && (from.lat !== to.lat || from.lng !== to.lng)
@@ -87,19 +115,6 @@ export function MapPage() {
   const routeById = (id: RouteId) => routes?.find(r => r.id === id)
   const selectedRoute = routeById(selectedId) ?? routes?.[0]
   const selectedIdSafe = selectedRoute?.id ?? 'safest'
-
-  // Centering on current location
-  const [mapCenter, setMapCenter] = useState<LngLat | null>(null)
-  
-  const handleUseCurrentLocation = () => {
-    if (coords) {
-      setFrom({ ...coords, label: 'Your Current Location' })
-      setMapCenter({ ...coords })
-      setIsChoosingStart(false)
-    } else {
-      alert("Please enable location services in your browser settings to use this feature.")
-    }
-  }
 
   /* ───────────────────────── DESKTOP ───────────────────────── */
   if (isDesktop) {
