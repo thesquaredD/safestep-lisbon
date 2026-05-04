@@ -50,6 +50,7 @@ type Props = {
   /** Notify parent so a mobile drawer can collapse when popup opens. */
   onSelectionChange?: (hasSelection: boolean) => void
   onGetDirections?: (lat: number, lng: number, label: string) => void
+  centerOverride?: LngLat | null
   className?: string
 }
 
@@ -62,12 +63,25 @@ export function MapView({
   showControls = true,
   onSelectionChange,
   onGetDirections,
+  centerOverride,
   className,
 }: Props) {
   const { data: sanctuaries } = useSanctuaries()
   const { data: hazards } = useHazards()
   const [selection, setSelection] = useState<PopupSelection | null>(null)
   const mapRef = useRef<MapRef | null>(null)
+
+  // Fly to override if provided (Issue 4)
+  useEffect(() => {
+    if (centerOverride && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [centerOverride.lng, centerOverride.lat],
+        zoom: 15,
+        essential: true,
+        duration: 2000
+      })
+    }
+  }, [centerOverride])
 
   const select = (s: PopupSelection | null) => {
     setSelection(s)
@@ -235,6 +249,16 @@ export function MapView({
               <div className="mt-1 px-2 py-0.5 bg-white text-neutral-900 text-[10px] font-bold rounded shadow-sm border border-neutral-100 whitespace-nowrap uppercase tracking-wider">
                 {to.label ?? 'Destination'}
               </div>
+            </div>
+          </Marker>
+        )}
+
+        {/* User Location Marker (Live GPS) - Issue 4 */}
+        {from?.label === 'Your Current Location' && (
+          <Marker longitude={from.lng} latitude={from.lat} anchor="center">
+            <div className="relative">
+              <div className="absolute inset-0 bg-brand-500 rounded-full animate-ping opacity-40" />
+              <div className="relative w-4 h-4 bg-brand-600 rounded-full border-2 border-white shadow-md" />
             </div>
           </Marker>
         )}

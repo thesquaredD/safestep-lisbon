@@ -88,6 +88,19 @@ export function MapPage() {
   const selectedRoute = routeById(selectedId) ?? routes?.[0]
   const selectedIdSafe = selectedRoute?.id ?? 'safest'
 
+  // Centering on current location
+  const [mapCenter, setMapCenter] = useState<LngLat | null>(null)
+  
+  const handleUseCurrentLocation = () => {
+    if (coords) {
+      setFrom({ ...coords, label: 'Your Current Location' })
+      setMapCenter({ ...coords })
+      setIsChoosingStart(false)
+    } else {
+      alert("Please enable location services in your browser settings to use this feature.")
+    }
+  }
+
   /* ───────────────────────── DESKTOP ───────────────────────── */
   if (isDesktop) {
     return (
@@ -100,6 +113,7 @@ export function MapPage() {
           onGetDirections={(lat, lng, label) => {
             setTo({ lat, lng, label })
           }}
+          centerOverride={mapCenter ?? undefined}
         />
 
         {/* Floating search */}
@@ -165,20 +179,13 @@ export function MapPage() {
 
               <div className="p-2 grid grid-cols-2 gap-1 max-h-[40vh] overflow-y-auto">
                 <button
-                  onClick={() => {
-                    if (coords) {
-                      setFrom({ ...coords, label: 'Your Current Location' })
-                      setIsChoosingStart(false)
-                    } else {
-                      alert("Please enable location services in your browser settings.")
-                    }
-                  }}
+                  onClick={handleUseCurrentLocation}
                   className="col-span-2 flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold hover:bg-brand-50 transition"
                 >
                   <Compass size={18} className="text-brand-500" />
                   <div>
                     <p>Use my current location</p>
-                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Beta GPS Flow</p>
+                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
                   </div>
                 </button>
                 
@@ -235,6 +242,7 @@ export function MapPage() {
             setTo({ lat, lng, label })
             setDrawerExpanded(true)
           }}
+          centerOverride={mapCenter ?? undefined}
         />
         <div className="absolute top-3 inset-x-3 z-10 flex flex-col gap-2">
           {/* Dual Input Search Area */}
@@ -332,20 +340,13 @@ export function MapPage() {
 
               <div className="p-2 grid grid-cols-1 gap-1 max-h-[50vh] overflow-y-auto">
                 <button
-                  onClick={() => {
-                    if (coords) {
-                      setFrom({ ...coords, label: 'Your Current Location' })
-                      setIsChoosingStart(false)
-                    } else {
-                      alert("Please enable location services in your browser settings to use this feature.")
-                    }
-                  }}
+                  onClick={handleUseCurrentLocation}
                   className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold hover:bg-brand-50 transition"
                 >
                   <Compass size={18} className="text-brand-500" />
                   <div>
                     <p>Use my current location</p>
-                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Beta GPS Flow</p>
+                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
                   </div>
                 </button>
                 

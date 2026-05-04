@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate, Link } from 'react-router'
 import { useEffect, useState } from 'react'
-import { Siren, Phone, X, User as UserIcon, AlertTriangle, MessageSquareShare, Navigation, Mail } from 'lucide-react'
+import { Siren, Phone, X, User as UserIcon, AlertTriangle, MessageSquareShare, Navigation, Mail, Save } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { Header } from './Header'
 import { DesktopShell } from './DesktopShell'
@@ -24,6 +24,7 @@ export function Layout() {
   
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [contact, setContact] = useState<{ name: string; phone: string } | null>(null)
 
   useEffect(() => {
@@ -31,6 +32,17 @@ export function Layout() {
       navigate('/onboarding', { replace: true })
     }
   }, [location.pathname, navigate])
+
+  // Issue 1: Show profile setup on first app visit (after onboarding)
+  useEffect(() => {
+    const hasOnboarded = localStorage.getItem(ONBOARDING_KEY)
+    const hasProfile = localStorage.getItem(PROFILE_KEY)
+    const hasDismissedSetup = sessionStorage.getItem('safestep:setup_dismissed')
+
+    if (hasOnboarded && !hasProfile && !hasDismissedSetup && location.pathname !== '/onboarding') {
+      setIsProfileModalOpen(true)
+    }
+  }, [location.pathname])
 
   // Sync contact when emergency modal opens
   useEffect(() => {
@@ -40,7 +52,16 @@ export function Layout() {
     }
   }, [isEmergencyOpen])
 
-  if (isDesktop) return <DesktopShell onFeedback={() => setIsFeedbackOpen(true)} />
+  if (isDesktop) return (
+    <>
+      <DesktopShell onFeedback={() => setIsFeedbackOpen(true)} />
+      {isFeedbackOpen && <FeedbackModal onClose={() => setIsFeedbackOpen(false)} />}
+      {isProfileModalOpen && <ProfileSetupModal onClose={() => {
+        setIsProfileModalOpen(false)
+        sessionStorage.setItem('safestep:setup_dismissed', 'true')
+      }} />}
+    </>
+  )
 
   const isMapPage = location.pathname === '/map'
   const isWalkPage = location.pathname === '/walk'
@@ -86,6 +107,14 @@ export function Layout() {
       {/* Feedback Modal */}
       {isFeedbackOpen && (
         <FeedbackModal onClose={() => setIsFeedbackOpen(false)} />
+      )}
+
+      {/* Profile Setup Modal (First visit) */}
+      {isProfileModalOpen && (
+        <ProfileSetupModal onClose={() => {
+          setIsProfileModalOpen(false)
+          sessionStorage.setItem('safestep:setup_dismissed', 'true')
+        }} />
       )}
 
       {/* Emergency Modal */}
@@ -308,6 +337,100 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
             </div>
           </form>
         )}
+      </div>
+    </div>
+  )
+}
+
+function ProfileSetupModal({ onClose }: { onClose: () => void }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    sex: '' as any,
+    sexCustom: ''
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(form))
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-[130] flex items-end justify-center bg-black/60 backdrop-blur-md p-4 sm:items-center">
+      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 grid place-items-center">
+              <UserIcon size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">Your Profile</h2>
+              <p className="text-xs text-neutral-500 font-medium">Personalize your SafeStep experience</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-neutral-100 grid place-items-center text-neutral-500 hover:bg-neutral-200 transition">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Full Name</label>
+            <input 
+              type="text" required value={form.name} onChange={e => setForm(s => ({ ...s, name: e.target.value }))}
+              placeholder="e.g. Maria Silva"
+              className="w-full px-4 py-3.5 rounded-2xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Email (Optional)</label>
+            <input 
+              type="email" value={form.email} onChange={e => setForm(s => ({ ...s, email: e.target.value }))}
+              placeholder="maria@example.com"
+              className="w-full px-4 py-3.5 rounded-2xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Sex (Optional)</label>
+            <select 
+              value={form.sex} 
+              onChange={e => setForm(s => ({ ...s, sex: e.target.value as any }))}
+              className="w-full px-4 py-3.5 rounded-2xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500 appearance-none transition-all"
+            >
+              <option value="">Select option...</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="non-binary">Non-binary</option>
+              <option value="prefer-not-to-say">Prefer not to say</option>
+              <option value="self-describe">Self-describe</option>
+            </select>
+          </div>
+
+          {form.sex === 'self-describe' && (
+            <div className="animate-in slide-in-from-top-2 duration-200">
+              <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Describe</label>
+              <input 
+                type="text" required value={form.sexCustom} onChange={e => setForm(s => ({ ...s, sexCustom: e.target.value }))}
+                placeholder="How do you describe yourself?"
+                className="w-full px-4 py-3.5 rounded-2xl bg-neutral-50 border border-neutral-100 text-sm outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+              />
+            </div>
+          )}
+
+          <p className="text-[10px] text-neutral-400 leading-relaxed italic border-t border-neutral-100 pt-4">
+            Prototype note: your profile is saved locally on this device. In a future version, profiles may sync securely with your account.
+          </p>
+
+          <button 
+            type="submit"
+            className="w-full py-4 bg-brand-600 text-white rounded-2xl font-bold shadow-lg shadow-brand-500/20 active:scale-[0.98] transition mt-2 flex items-center justify-center gap-2"
+          >
+            <Save size={18} /> Continue to app
+          </button>
+        </form>
       </div>
     </div>
   )
