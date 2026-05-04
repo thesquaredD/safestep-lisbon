@@ -1,6 +1,6 @@
 import { Outlet, useLocation, useNavigate, Link } from 'react-router'
 import { useEffect, useState } from 'react'
-import { Siren, Phone, X, User as UserIcon, AlertTriangle, MessageSquareShare } from 'lucide-react'
+import { Siren, Phone, X, User as UserIcon, AlertTriangle, MessageSquareShare, Navigation, Mail } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { Header } from './Header'
 import { DesktopShell } from './DesktopShell'
@@ -9,16 +9,19 @@ import { cn } from '@/lib/cn'
 
 const ONBOARDING_KEY = 'safestep:onboarded'
 const CONTACT_KEY = 'safestep:emergency_contact'
+const PROFILE_KEY = 'safestep:user_profile'
+const FEEDBACK_KEY = 'safestep:local_feedback'
 
 /**
  * Branches between two shells based on viewport.
- * Mobile: phone-frame stack (header + Outlet + bottom nav) — unchanged.
- * Desktop: ink-purple sidebar + full-bleed main (DesktopShell renders its own Outlet).
+ * Mobile: phone-frame stack (header + Outlet + bottom nav)
+ * Desktop: sidebar + full-bleed main
  */
 export function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const isDesktop = useMediaQuery('(min-width: 768px)')
+  
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const [contact, setContact] = useState<{ name: string; phone: string } | null>(null)
@@ -91,14 +94,14 @@ export function Layout() {
           <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 grid place-items-center">
+                <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 grid place-items-center font-bold">
                   <AlertTriangle size={24} />
                 </div>
                 <h2 className="text-2xl font-bold tracking-tight text-neutral-900">Emergency</h2>
               </div>
               <button 
                 onClick={() => setIsEmergencyOpen(false)}
-                className="w-10 h-10 rounded-full bg-neutral-100 grid place-items-center text-neutral-500"
+                className="w-10 h-10 rounded-full bg-neutral-100 grid place-items-center text-neutral-500 hover:bg-neutral-200 transition"
               >
                 <X size={20} />
               </button>
@@ -154,7 +157,7 @@ export function Layout() {
               )}
             </div>
 
-            <p className="text-center text-xs text-neutral-400 mt-8 leading-relaxed">
+            <p className="text-center text-xs text-neutral-400 mt-8 leading-relaxed italic border-t border-neutral-100 pt-4">
               SafeStep is a prototype. In a real emergency, always call local authorities immediately.
             </p>
           </div>
@@ -164,17 +167,18 @@ export function Layout() {
   )
 }
 
-
-const FEEDBACK_KEY = 'safestep:local_feedback'
-
 function FeedbackModal({ onClose }: { onClose: () => void }) {
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    confused: '',
-    useful: '',
-    nightUse: 'maybe' as 'yes' | 'maybe' | 'no',
-    comments: ''
+  const [form, setForm] = useState(() => {
+    const profileRaw = localStorage.getItem(PROFILE_KEY)
+    const profile = profileRaw ? JSON.parse(profileRaw) : null
+    return {
+      name: profile?.name || '',
+      email: profile?.email || '',
+      confused: '',
+      useful: '',
+      nightUse: 'maybe' as 'yes' | 'maybe' | 'no',
+      comments: ''
+    }
   })
   const [submitted, setSubmitted] = useState(false)
 
@@ -188,10 +192,15 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/60 backdrop-blur-md p-4 sm:items-center">
+    <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/60 backdrop-blur-md p-4 sm:items-center">
       <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold tracking-tight">Give feedback</h2>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 grid place-items-center">
+              <MessageSquareShare size={20} />
+            </div>
+            <h2 className="text-xl font-bold tracking-tight">Give feedback</h2>
+          </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-neutral-100 grid place-items-center text-neutral-500 hover:bg-neutral-200 transition">
             <X size={18} />
           </button>
@@ -200,10 +209,10 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
         {submitted ? (
           <div className="py-8 text-center space-y-4">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full grid place-items-center mx-auto">
-              <UserIcon size={32} />
+              <Navigation size={32} />
             </div>
             <h3 className="text-lg font-bold">Thank you!</h3>
-            <p className="text-sm text-neutral-600 leading-relaxed">
+            <p className="text-sm text-neutral-600 leading-relaxed px-4">
               Your feedback was saved on this device for the prototype.
             </p>
             <button 
@@ -251,10 +260,10 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
             <div>
               <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5 ml-1">Would you use this at night?</label>
               <div className="grid grid-cols-3 gap-2">
-                {['yes', 'maybe', 'no'].map(val => (
+                {(['yes', 'maybe', 'no'] as const).map(val => (
                   <button
                     key={val} type="button"
-                    onClick={() => setForm(s => ({ ...s, nightUse: val as any }))}
+                    onClick={() => setForm(s => ({ ...s, nightUse: val }))}
                     className={cn(
                       "py-2 rounded-xl border text-xs font-bold capitalize transition-all",
                       form.nightUse === val ? "bg-brand-500 border-brand-500 text-white shadow-sm" : "bg-neutral-50 border-neutral-100 text-neutral-600"
@@ -287,10 +296,14 @@ function FeedbackModal({ onClose }: { onClose: () => void }) {
               </button>
               <button 
                 type="button"
-                onClick={() => window.location.href = 'mailto:safestep.information@gmail.com?subject=SafeStep feedback / collaboration'}
-                className="w-full text-xs font-bold text-brand-600 hover:text-brand-700 transition"
+                onClick={() => {
+                  const subject = encodeURIComponent('SafeStep feedback / collaboration')
+                  const body = encodeURIComponent('Hi SafeStep team,\n\nI would like to help improve the app.\n\nMy suggestion is: ')
+                  window.location.href = `mailto:safestep.information@gmail.com?subject=${subject}&body=${body}`
+                }}
+                className="w-full flex items-center justify-center gap-2 text-xs font-bold text-brand-600 hover:text-brand-700 transition"
               >
-                Want to help us improve? Contact us
+                <Mail size={14} /> Want to help us improve? Contact us
               </button>
             </div>
           </form>
