@@ -11,7 +11,7 @@ import { SearchBar } from '@/components/SearchBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useLocation } from '@/lib/useLocation'
 import {
-  useRoutes, DEFAULT_DESTINATION,
+  useRoutes,
   type LngLat, type RouteId, type Route,
 } from '@/data/routes'
 
@@ -27,7 +27,7 @@ const QUICK_START_POINTS: (LngLat & { id: string })[] = [
 const ACTIVE_START_KEY = 'safestep:active_start'
 
 export function MapPage() {
-  const { coords, status: locationStatus } = useLocation()
+  const { coords, status: locationStatus, requestLocation } = useLocation()
   const [searchParams] = useSearchParams()
   const urlLat = searchParams.get('lat')
   const urlLng = searchParams.get('lng')
@@ -35,66 +35,72 @@ export function MapPage() {
   const toLng = searchParams.get('toLng')
   const toLabel = searchParams.get('toLabel')
 
-  // Derive initial values
-  const getInitialOrigin = () => {
-    // 1. URL params (direct navigation/routing)
-    if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' }
-    
-    // 2. Persisted active start
-    const saved = localStorage.getItem(ACTIVE_START_KEY)
-    if (saved) return JSON.parse(saved) as LngLat
-
-    // 3. Live GPS
-    if (coords) return { ...coords, label: 'Your Current Location' }
-    
-    // 4. Default fallback
-    return QUICK_START_POINTS[0]
-  }
-
-  const getInitialDestination = () => {
-    if (toLat && toLng) return { lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' }
-    return null
-  }
-
-  const isDesktop = useMediaQuery('(min-width: 768px)')
-  const [from, setFrom] = useState<LngLat | null>(getInitialOrigin())
-  const [to, setTo] = useState<LngLat | null>(getInitialDestination())
+  const [from, setFrom] = useState<LngLat | null>(null)
+  const [to, setTo] = useState<LngLat | null>(null)
   const [isChoosingStart, setIsChoosingStart] = useState(false)
   const [drawerExpanded, setDrawerExpanded] = useState(true)
   const [searchTrigger, setSearchTrigger] = useState(0)
   const [mapCenter, setMapCenter] = useState<LngLat | null>(null)
 
-  // Persist "from" whenever it changes
-  useEffect(() => {
-    if (from) {
-      localStorage.setItem(ACTIVE_START_KEY, JSON.stringify(from))
-    }
-  }, [from])
+  const isDesktop = useMediaQuery('(min-width: 768px)')
 
-  // Sync if URL change or GPS enabled
+  // Initial mount sync
   useEffect(() => {
-    if (urlLat && urlLng) {
-      setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
-    } else if (coords && (!from || from.label === QUICK_START_POINTS[0].label)) {
-      setFrom({ ...coords, label: 'Your Current Location' })
-    }
-    
+    // 1. Destination
     if (toLat && toLng) {
       setTo({ lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' })
       setDrawerExpanded(true)
     }
-  }, [urlLat, urlLng, toLat, toLng, toLabel, coords])
+
+    // 2. Origin (Initial load)
+    if (urlLat && urlLng) {
+      setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
+    } else {
+      const saved = localStorage.getItem(ACTIVE_START_KEY)
+      if (saved) {
+        setFrom(JSON.parse(saved))
+      } else if (coords) {
+        setFrom({ ...coords, label: 'Your Current Location' })
+        setMapCenter({ ...coords })
+      } else {
+        // We don't set a default yet, let the location hook try first
+      }
+    }
+  }, [urlLat, urlLng, toLat, toLng, toLabel])
+
+  // Issue 1 & 4: React to live GPS updates
+  useEffect(() => {
+    if (coords && (from?.label === 'Your Current Location' || !from)) {
+      const newFrom = { ...coords, label: 'Your Current Location' }
+      setFrom(newFrom)
+      localStorage.setItem(ACTIVE_START_KEY, JSON.stringify(newFrom))
+      // Only fly to location once when it first becomes available
+      if (!mapCenter) setMapCenter({ ...coords })
+    }
+  }, [coords])
 
   const handleUseCurrentLocation = () => {
+    if (locationStatus === 'prompt') {
+      requestLocation()
+      return
+    }
+    
     if (coords) {
       const newFrom = { ...coords, label: 'Your Current Location' }
       setFrom(newFrom)
       setMapCenter({ ...coords })
       setIsChoosingStart(false)
     } else {
-      alert("Please enable location services in your browser settings to use this feature.")
+      alert("Location services are unavailable. Please check your browser permissions.")
     }
   }
+
+  // Persist "from" whenever it changes manually
+  useEffect(() => {
+    if (from) {
+      localStorage.setItem(ACTIVE_START_KEY, JSON.stringify(from))
+    }
+  }, [from])
 
   // Only calculate routes if both points are clearly selected
   const hasBothPoints = from && to && (from.lat !== to.lat || from.lng !== to.lng)
@@ -199,7 +205,7 @@ export function MapPage() {
                 >
                   <Compass size={18} className="text-brand-500" />
                   <div>
-                    <p>Use my current location</p>
+                    <p>{locationStatus === 'success' ? 'Location Enabled' : 'Use my current location'}</p>
                     <p className="text-[10px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
                   </div>
                 </button>
@@ -360,7 +366,7 @@ export function MapPage() {
                 >
                   <Compass size={18} className="text-brand-500" />
                   <div>
-                    <p>Use my current location</p>
+                    <p>{locationStatus === 'success' ? 'Location Enabled' : 'Use my current location'}</p>
                     <p className="text-[10px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
                   </div>
                 </button>
@@ -395,13 +401,13 @@ export function MapPage() {
               </div>
               <h3 className="font-bold text-neutral-900 mb-2">Location Required</h3>
               <p className="text-sm text-neutral-500 mb-6 leading-relaxed">
-                We could not access your current location. Please enable location or choose a starting point manually.
+                Choose a starting point or enable location first to plan your safest route.
               </p>
               <button 
-                onClick={() => setFrom({ ...DEFAULT_DESTINATION, label: 'Manual Start' })}
+                onClick={() => setFrom(QUICK_START_POINTS[0])}
                 className="w-full py-3 bg-brand-600 text-white rounded-xl font-bold active:scale-95 transition"
               >
-                Set manual start
+                Use default start
               </button>
             </div>
           </div>

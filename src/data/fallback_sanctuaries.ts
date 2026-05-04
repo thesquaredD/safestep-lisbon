@@ -12,7 +12,7 @@ export const FALLBACK_SANCTUARIES: SanctuaryFallback[] = [
     neighborhood: 'Carcavelos', business_type: 'university', created_at: new Date().toISOString()
   },
   {
-    id: 'f-2', name: 'Pingo Doce Nova SBE (Entrance)', kind: 'store', address: 'Nova SBE Campus, Carcavelos',
+    id: 'f-2', name: 'Pingo Doce Nova SBE', kind: 'store', address: 'Nova SBE Campus, Carcavelos',
     description: 'Inside Nova SBE campus — use main entrance. Brightly lit and staffed supermarket.',
     lat: 38.6780, lng: -9.3250, is_open_now: true, hours_text: '08:00 — 21:00',
     verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
@@ -1172,7 +1172,7 @@ export const FALLBACK_SANCTUARIES: SanctuaryFallback[] = [
   {
     id: 'f-shot-15', name: 'The Folks Santos', kind: 'cafe', address: 'Avenida 24 de Julho 60',
     description: 'Busy brunch and coffee spot on the main avenue.',
-    lat: 38.7068, lng: -9.1545, is_open_now: true, hours_text: '09:00 — 18:00',
+    lat: 38.7068, lng: -9.1545, is_open_now: true, hours_text: 'Needs verification',
     verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
     neighborhood: 'Santos', business_type: 'café', created_at: new Date().toISOString()
   },
@@ -1191,9 +1191,9 @@ export const FALLBACK_SANCTUARIES: SanctuaryFallback[] = [
     neighborhood: 'Santos', business_type: 'store', created_at: new Date().toISOString()
   },
   {
-    id: 'f-shot-18', name: 'MBH Burger House, Alcântara', kind: 'cafe', address: 'Rua de Cascais 12',
+    id: 'f-shot-18', name: 'MB Burgers (Alcântara)', kind: 'cafe', address: 'Rua de Cascais 12',
     description: 'Burger restaurant with late hours and staff presence near LX Factory.',
-    lat: 38.7035, lng: -9.1780, is_open_now: true, hours_text: '12:00 — 00:00',
+    lat: 38.7035, lng: -9.1780, is_open_now: true, hours_text: 'Needs verification',
     verified: false, status: 'candidate', support_offered: 'Wait inside, staff assistance',
     neighborhood: 'Alcântara', business_type: 'restaurant', created_at: new Date().toISOString()
   },

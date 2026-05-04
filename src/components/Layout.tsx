@@ -179,9 +179,8 @@ export function Layout() {
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-lg leading-none">Add Emergency Contact</p>
-                      <p className="text-xs mt-1 text-neutral-400">Set this up in your Profile</p>
-                    </div>
-                  </div>
+                      <p className="text-xs mt-1 text-neutral-400">No emergency contact saved yet. Add one in Profile.</p>
+                    </div>                  </div>
                 </Link>
               )}
             </div>

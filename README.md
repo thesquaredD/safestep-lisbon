@@ -91,3 +91,6 @@ export default defineConfig([
   },
 ])
 ```
+
+## Prototype Note: Local Storage
+The current version of SafeStep stores user profiles, feedback, and hazard reports locally on the user's device (using localStorage). The development team cannot yet see a centralized list of users or shared reports. To track records across devices and sync data globally, a backend integration (like Supabase Auth and persistent tables) will be implemented in a future version.
