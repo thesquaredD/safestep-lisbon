@@ -65,7 +65,7 @@ export function Layout() {
 
   const isMapPage = location.pathname === '/map'
   const isWalkPage = location.pathname === '/walk'
-  const showSOS = location.pathname !== '/onboarding'
+  const showSOS = location.pathname !== '/onboarding' && !isMapPage
 
   return (
     <div className="phone-frame flex flex-col h-svh bg-surface overflow-hidden relative">

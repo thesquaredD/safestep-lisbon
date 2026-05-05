@@ -35,40 +35,40 @@ export function MapPage() {
   const toLng = searchParams.get('toLng')
   const toLabel = searchParams.get('toLabel')
 
-  const [from, setFrom] = useState<LngLat | null>(null)
-  const [to, setTo] = useState<LngLat | null>(null)
-  const [isChoosingStart, setIsChoosingStart] = useState(false)
-  const [drawerExpanded, setDrawerExpanded] = useState(true)
-  const [searchTrigger, setSearchTrigger] = useState(0)
-  const [mapCenter, setMapCenter] = useState<LngLat | null>(null)
-
   const isDesktop = useMediaQuery('(min-width: 768px)')
 
-  // Initial mount sync
+  const [from, setFrom] = useState<LngLat | null>(() => {
+    if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' }
+    const saved = localStorage.getItem(ACTIVE_START_KEY)
+    if (saved) return JSON.parse(saved)
+    return null
+  })
+  
+  const [to, setTo] = useState<LngLat | null>(() => {
+    if (toLat && toLng) return { lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' }
+    return null
+  })
+
+  const [isChoosingStart, setIsChoosingStart] = useState(false)
+  const [drawerExpanded, setDrawerExpanded] = useState(!!(toLat && toLng))
+  const [searchTrigger, setSearchTrigger] = useState(0)
+  const [mapCenter, setMapCenter] = useState<LngLat | null>(() => {
+    if (urlLat && urlLng) return { lat: Number(urlLat), lng: Number(urlLng) }
+    const saved = localStorage.getItem(ACTIVE_START_KEY)
+    if (saved) return JSON.parse(saved)
+    return null
+  })
+
+  // Initial mount sync - location hook fallback
   useEffect(() => {
-    // 1. Destination
-    if (toLat && toLng) {
-      setTo({ lat: Number(toLat), lng: Number(toLng), label: toLabel ?? 'Destination' })
-      setDrawerExpanded(true)
+    if (!from && coords) {
+      const newFrom = { ...coords, label: 'Your Current Location' }
+      setFrom(newFrom)
+      setMapCenter({ ...coords })
     }
+  }, [coords])
 
-    // 2. Origin (Initial load)
-    if (urlLat && urlLng) {
-      setFrom({ lat: Number(urlLat), lng: Number(urlLng), label: 'Your Current Location' })
-    } else {
-      const saved = localStorage.getItem(ACTIVE_START_KEY)
-      if (saved) {
-        setFrom(JSON.parse(saved))
-      } else if (coords) {
-        setFrom({ ...coords, label: 'Your Current Location' })
-        setMapCenter({ ...coords })
-      } else {
-        // We don't set a default yet, let the location hook try first
-      }
-    }
-  }, [urlLat, urlLng, toLat, toLng, toLabel])
-
-  // Issue 1 & 4: React to live GPS updates
+  // React to live GPS updates
   useEffect(() => {
     if (coords && (from?.label === 'Your Current Location' || !from)) {
       const newFrom = { ...coords, label: 'Your Current Location' }
@@ -253,11 +253,8 @@ export function MapPage() {
 
   /* ───────────────────────── MOBILE ────────────────────────── */
   return (
-    <div className={cn(
-      'grid h-full transition-[grid-template-rows] duration-200',
-      drawerExpanded ? 'grid-rows-[2fr_3fr]' : 'grid-rows-[5fr_auto]',
-    )}>
-      <div className="relative">
+    <div className="relative h-full overflow-hidden flex flex-col">
+      <div className="flex-1 relative">
         <MapView
           routes={routes ?? []}
           selectedRouteId={selectedIdSafe}
@@ -270,85 +267,51 @@ export function MapPage() {
           }}
           centerOverride={mapCenter ?? undefined}
         />
+        
+        {/* Ultra-Compact Floating Search Area */}
         <div className="absolute top-3 inset-x-3 z-10 flex flex-col gap-2">
-          {/* Dual Input Search Area */}
-          <div className="bg-surface/98 backdrop-blur-md rounded-2xl border border-black/5 shadow-[var(--shadow-float)] overflow-hidden">
-            <div className="p-3 flex flex-col gap-2">
-              {/* Start Input */}
-              <div className="flex items-center gap-3 px-2 py-1.5 bg-neutral-50 rounded-xl border border-neutral-100 group focus-within:border-brand-200 transition">
-                <div className="w-2 h-2 rounded-full bg-brand-500 shrink-0 mx-1" />
-                <div className="flex-1 flex flex-col min-w-0">
-                  <span className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider leading-none mb-0.5">Start</span>
-                  <input
-                    type="text"
-                    readOnly
-                    onClick={() => setIsChoosingStart(true)}
-                    value={from?.label ?? ''}
-                    placeholder="Where are you starting from?"
-                    className="bg-transparent outline-none text-[13px] text-[#14101c] placeholder:text-neutral-400 cursor-pointer"
-                  />
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-black/5 shadow-xl overflow-hidden">
+            <div className="p-1.5 flex flex-col gap-1">
+              {/* Start Input (Minimal) */}
+              <button
+                onClick={() => setIsChoosingStart(true)}
+                className="flex items-center gap-2.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg border border-neutral-100 text-left transition"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] text-[#14101c] truncate">
+                    {from?.label === 'Your Current Location' ? 'My Current Location' : (from?.label ?? 'Starting point...')}
+                  </div>
                 </div>
-                {from?.label === 'Your Current Location' && (
-                  <Compass size={14} className="text-brand-500 animate-pulse shrink-0" />
+                {from?.label === 'Your Current Location' ? (
+                  <Compass size={12} className="text-brand-500 animate-pulse shrink-0" />
+                ) : (
+                  <MapPinIcon size={12} className="text-neutral-400 shrink-0" />
                 )}
-              </div>
+              </button>
 
-              {/* Destination Input */}
-              <div className="flex items-center gap-3 px-2 py-1.5 bg-neutral-50 rounded-xl border border-neutral-100 group focus-within:border-brand-200 transition">
-                <MapPinIcon size={14} className="text-rose-500 shrink-0 mx-0.5" />
-                <div className="flex-1 flex flex-col min-w-0">
-                  <span className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider leading-none mb-0.5">Destination</span>
+              {/* Destination Input (Minimal) */}
+              <div className="flex items-center gap-2.5 px-2.5 py-1.5 bg-neutral-50 rounded-lg border border-neutral-100 transition">
+                <MapPinIcon size={12} className="text-rose-500 shrink-0" />
+                <div className="flex-1 min-w-0">
                   <SearchBar
                     destination={to as LngLat}
                     onDestinationChange={(d) => { setTo(d); setDrawerExpanded(true) }}
-                    className="p-0"
+                    className="p-0 text-[12px]"
                     isMinimal
+                    placeholder="Where to?"
                     triggerOpen={searchTrigger}
                   />
                 </div>
               </div>
             </div>
-            
-            {/* Quick Actions Bar */}
-            <div className="px-3 pb-3 flex items-center justify-between border-t border-neutral-50 pt-2">
-              <button 
-                onClick={() => setShowLegend(v => !v)}
-                className={cn(
-                  "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight px-2.5 py-1 rounded-full transition",
-                  showLegend ? "bg-brand-100 text-brand-700" : "text-neutral-500 hover:bg-neutral-100"
-                )}
-              >
-                <BookOpen size={12} /> Legend
-              </button>
-              
-              <div className="flex items-center gap-2">
-                {/* Location Status Bar (Mobile Inline) */}
-                <div className={cn(
-                  "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-tight transition shadow-sm border",
-                  locationStatus === 'success' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
-                )}>
-                  {locationStatus === 'success' ? (
-                    <><MapPinIcon size={10} /> GPS On</>
-                  ) : (
-                    <><Info size={10} /> GPS Off</>
-                  )}
-                </div>
-
-                <button 
-                  onClick={() => setIsChoosingStart(true)}
-                  className="flex items-center gap-1 px-3 py-1 bg-brand-50 text-brand-700 rounded-lg text-[10px] font-bold uppercase tracking-tight hover:bg-brand-100 transition shadow-sm border border-brand-100"
-                >
-                  <MapPinIcon size={10} /> Change Start
-                </button>
-              </div>
-            </div>
           </div>
 
-          {/* Location Picker Overlay */}
+          {/* Location Picker Overlay (Overlaying the map) */}
           {isChoosingStart && (
             <div className="bg-white rounded-2xl shadow-2xl border border-brand-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              <div className="p-4 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
-                <h3 className="font-bold text-brand-900 text-sm">Where are you starting?</h3>
+              <div className="p-3 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
+                <h3 className="font-bold text-brand-900 text-sm">Starting point</h3>
                 <button onClick={() => setIsChoosingStart(false)} className="text-neutral-400 p-1 hover:bg-black/5 rounded-full transition">
                   <X size={18} />
                 </button>
@@ -364,32 +327,28 @@ export function MapPage() {
                 />
               </div>
 
-              <div className="p-2 grid grid-cols-1 gap-1 max-h-[50vh] overflow-y-auto">
+              <div className="p-2 flex flex-col gap-1 max-h-[40vh] overflow-y-auto">
                 <button
                   onClick={handleUseCurrentLocation}
-                  className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold hover:bg-brand-50 transition"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left bg-white border border-brand-100 shadow-sm text-brand-700 font-bold hover:bg-brand-50 transition"
                 >
                   <Compass size={18} className="text-brand-500" />
                   <div>
-                    <p>{locationStatus === 'success' ? 'Location Enabled' : 'Use my current location'}</p>
-                    <p className="text-[10px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
+                    <p className="text-xs">Use current location</p>
+                    <p className="text-[9px] text-brand-400 uppercase tracking-tight">Immediate GPS Centering</p>
                   </div>
                 </button>
                 
-                <div className="px-3 pt-3 pb-1">
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-widest">Quick Start Points</span>
-                </div>
-
                 {QUICK_START_POINTS.map(p => (
                   <button
                     key={p.id}
                     onClick={() => { setFrom(p); setIsChoosingStart(false) }}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-left transition",
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-xs text-left transition",
                       from?.label === p.label ? "bg-brand-50 text-brand-700 font-semibold" : "hover:bg-neutral-50 text-neutral-700"
                     )}
                   >
-                    <MapPinIcon size={16} className={from?.label === p.label ? "text-brand-500" : "text-neutral-400"} />
+                    <MapPinIcon size={14} className={from?.label === p.label ? "text-brand-500" : "text-neutral-400"} />
                     {p.label}
                   </button>
                 ))}
@@ -419,55 +378,116 @@ export function MapPage() {
         )}
         
         {showLegend && <LegendCard onClose={() => setShowLegend(false)} compact />}
-      </div>
-
-      <div className="bg-white border-t border-neutral-200 flex flex-col overflow-hidden">
-        {to ? (
-          <>
-            <button
-              onClick={() => setDrawerExpanded(v => !v)}
-              className="py-2 flex flex-col items-center text-neutral-400 hover:text-neutral-600"
-              aria-label={drawerExpanded ? 'Collapse route options' : 'Expand route options'}
+        
+        {/* Compact Bottom UI for Map (GPS/Legend) */}
+        {!to && (
+          <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+            <button 
+              onClick={() => setShowLegend(v => !v)}
+              className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-colors border",
+                showLegend ? "bg-brand-500 text-white border-brand-600" : "bg-white text-neutral-600 border-neutral-200"
+              )}
             >
-              <span className="w-10 h-1 bg-neutral-300 rounded-full" aria-hidden="true" />
-              <span className="text-xs mt-1 inline-flex items-center gap-1">
-                {drawerExpanded ? <>Hide <ChevronDown size={12} /></> : <>Route Options <ChevronUp size={12} /></>}
-              </span>
+              <BookOpen size={18} />
             </button>
-
-            {drawerExpanded && (
-              <div className="flex-1 overflow-y-auto px-4 pb-4">
-                <RouteOptionsHeader provider={routingProvider} />
-                <RouteList
-                  routes={routes}
-                  loading={routesLoading}
-                  error={routesError}
-                  selectedId={selectedIdSafe}
-                  onSelect={setSelectedId}
-                  toSet={!!to}
-                  provider={routingProvider}
-                  onSearchClick={() => setSearchTrigger(v => v + 1)}
-                />
-                <div className="grid grid-cols-4 gap-2 mt-4">
-                  <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} destination={to} />
-                  <ActionChip to="/sanctuary" icon={Shield}         label="Sanctuary" from={from} />
-                  <ActionChip to="/mesh"       icon={Radio}          label="Mesh"      from={from} />
-                  <ActionChip to="/audit"      icon={AlertTriangle}  label="Report"    from={from} />
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="px-4 py-4 pb-6">
-            <div className="grid grid-cols-4 gap-2">
-              <ActionChip to="/walk"      icon={Footprints}     label="Walk"      from={from} destination={to} />
-              <ActionChip to="/sanctuary" icon={Shield}         label="Sanctuary" from={from} />
-              <ActionChip to="/mesh"       icon={Radio}          label="Mesh"      from={from} />
-              <ActionChip to="/audit"      icon={AlertTriangle}  label="Report"    from={from} />
+            <div className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center shadow-lg border text-[9px] font-bold",
+              locationStatus === 'success' ? "bg-emerald-50 text-emerald-600 border-emerald-200" : "bg-amber-50 text-amber-600 border-amber-200"
+            )}>
+              {locationStatus === 'success' ? 'GPS' : 'OFF'}
             </div>
           </div>
         )}
       </div>
+
+      {/* Route Options Drawer (Only if destination selected) */}
+      {to && (
+        <div className={cn(
+          "bg-white border-t border-neutral-200 flex flex-col transition-all duration-300 ease-in-out",
+          drawerExpanded ? "h-[50vh]" : "h-auto"
+        )}>
+          <button
+            onClick={() => setDrawerExpanded(v => !v)}
+            className="py-1.5 flex flex-col items-center text-neutral-400 hover:text-neutral-600"
+            aria-label={drawerExpanded ? 'Collapse route options' : 'Expand route options'}
+          >
+            <span className="w-8 h-1 bg-neutral-200 rounded-full" aria-hidden="true" />
+          </button>
+
+          {drawerExpanded ? (
+            <div className="flex-1 overflow-y-auto px-4 pb-6">
+              <div className="flex items-center justify-between mb-3">
+                <RouteOptionsHeader provider={routingProvider} />
+                <button 
+                  onClick={() => setShowLegend(v => !v)}
+                  className={cn(
+                    "p-1.5 rounded-lg border transition-colors",
+                    showLegend ? "bg-brand-50 text-brand-600 border-brand-200" : "bg-neutral-50 text-neutral-400 border-neutral-100"
+                  )}
+                >
+                  <BookOpen size={16} />
+                </button>
+              </div>
+              <RouteList
+                routes={routes}
+                loading={routesLoading}
+                error={routesError}
+                selectedId={selectedIdSafe}
+                onSelect={(id) => {
+                  setSelectedId(id)
+                  setDrawerExpanded(false)
+                }}
+                toSet={!!to}
+                provider={routingProvider}
+                onSearchClick={() => setSearchTrigger(v => v + 1)}
+              />
+            </div>
+          ) : (
+            <div className="px-4 py-3 flex items-center justify-between">
+              {selectedRoute ? (
+                <div className="flex items-center gap-4 flex-1">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl grid place-items-center text-white font-bold text-sm shadow-sm",
+                    selectedRoute.tone === 'safe' ? 'bg-safe' : selectedRoute.tone === 'warn' ? 'bg-warn' : 'bg-risk'
+                  )}>
+                    {selectedRoute.score}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-[13px] text-neutral-900 truncate">
+                      {selectedRoute.label.replace(' walking route', '')}
+                    </div>
+                    <div className="text-[11px] text-neutral-500 font-medium">
+                      {selectedRoute.minutes} min · {selectedRoute.km} km
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setDrawerExpanded(true)}
+                    className="px-3 py-1.5 bg-brand-50 text-brand-700 rounded-lg text-[11px] font-bold uppercase tracking-tight border border-brand-100 active:scale-95 transition"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Route Options</span>
+                  {routes && routes.length > 0 && (
+                    <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-bold">
+                      {routes.length} found
+                    </span>
+                  )}
+                </div>
+              )}
+              <button 
+                onClick={() => setDrawerExpanded(true)}
+                className="p-1 text-neutral-400"
+              >
+                <ChevronUp size={18} />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -496,6 +516,16 @@ const getScoreLabel = (score: number) => {
 }
 
 function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: () => void }) {
+  const isDesktop = useMediaQuery('(min-width: 768px)')
+  const [showWhy, setShowWhy] = useState(isDesktop)
+
+  // Collapse explanation when switching routes on mobile
+  useEffect(() => {
+    if (!isDesktop) setShowWhy(false)
+  }, [active, isDesktop])
+
+  const providerLabel = r.provider === 'ors' ? 'OpenRouteService' : 'Prototype'
+
   return (
     <div className="flex flex-col gap-1 w-full">
       <button
@@ -516,52 +546,54 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
               {getScoreLabel(r.score)}
             </span>
           </div>
-          <div className="text-xs text-neutral-500">{r.minutes} min · {r.km} km</div>
-          {r.summary && <div className="text-[10px] text-brand-600 font-medium mt-0.5 line-clamp-1 italic">{r.summary}</div>}
+          <div className="text-xs text-neutral-500">
+            {r.minutes} min · {r.km} km
+            <span className="mx-1.5 text-neutral-300">·</span>
+            <span className="font-medium text-brand-600 uppercase text-[9px] tracking-wider">{providerLabel}</span>
+          </div>
+          {isDesktop && r.summary && <div className="text-[10px] text-brand-600 font-medium mt-0.5 line-clamp-1 italic">{r.summary}</div>}
         </div>
         <ChevronDown size={18} className={cn('text-neutral-400 transition', active && 'rotate-180 text-brand-500')} />
       </button>
       
       {active && (
         <div className="px-3 pb-3 -mt-2 pt-4 bg-white border border-t-0 border-brand-200 rounded-b-xl animate-in slide-in-from-top-2 duration-200">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-3 rounded-full bg-brand-500" />
-              <p className="text-[11px] font-bold text-neutral-900">Why this score?</p>
-            </div>
-            <p className="text-[11px] text-neutral-600 leading-relaxed pl-3 italic border-l border-neutral-100">
-              "This route has a {r.score}/100 safety rating. {r.summary}. It focuses on well-lit, active streets to maximize visibility."
-            </p>
-            <div className="flex gap-4 mt-1 pl-3">
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-safe" />
-                <span className="text-[9px] text-neutral-500">Safe Spot</span>
+          {!showWhy ? (
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowWhy(true) }}
+              className="text-[11px] font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 px-1 py-0.5 rounded hover:bg-brand-50 transition"
+            >
+              <Info size={14} />
+              Why this score?
+            </button>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={() => setShowWhy(false)}
+                className="flex items-center gap-2 text-left"
+              >
+                <div className="w-1 h-3 rounded-full bg-brand-500" />
+                <p className="text-[11px] font-bold text-neutral-900">Why this score?</p>
+                <ChevronUp size={12} className="text-neutral-400" />
+              </button>
+              <p className="text-[11px] text-neutral-600 leading-relaxed pl-3 italic border-l border-neutral-100">
+                "This route has a {r.score}/100 safety rating. {r.summary} It focuses on well-lit, active streets to maximize visibility."
+              </p>
+              <div className="flex gap-4 mt-1 pl-3">
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-safe" />
+                  <span className="text-[9px] text-neutral-500">Safe Spot</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-warn" />
+                  <span className="text-[9px] text-neutral-500">Hazard</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-warn" />
-                <span className="text-[9px] text-neutral-500">Hazard</span>
-              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
-  )
-}
-
-function ActionChip({ to, icon: Icon, label, from, destination }: { to: string; icon: React.ElementType; label: string; from?: LngLat | null; destination?: LngLat | null }) {
-  let url = from ? `${to}?lat=${from.lat}&lng=${from.lng}&fromLabel=${encodeURIComponent(from.label ?? '')}` : to
-  if (to === '/sanctuary') {
-    url += (url.includes('?') ? '&' : '?') + 'mode=nearest'
-  }
-  if (to === '/walk' && destination) {
-    url += (url.includes('?') ? '&' : '?') + `toLat=${destination.lat}&toLng=${destination.lng}&toLabel=${encodeURIComponent(destination.label ?? 'Destination')}`
-  }
-  return (
-    <Link to={url} className="flex flex-col items-center gap-1 rounded-xl bg-brand-50 py-2.5 text-xs text-brand-700 hover:bg-brand-100 transition border border-brand-100/50">
-      <Icon size={18} />
-      {label}
-    </Link>
   )
 }
 
