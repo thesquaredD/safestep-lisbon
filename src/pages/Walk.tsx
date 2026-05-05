@@ -88,7 +88,7 @@ export function WalkPage() {
       <div className="flex-1 relative bg-neutral-100">
         <MapView 
           routes={routes ?? []} 
-          selectedRouteId="safest" 
+          selectedRouteId="safer" 
           from={from}
           to={to}
         />

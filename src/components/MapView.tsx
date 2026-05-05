@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/cn'
 import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 import { useHazards, type Hazard } from '@/data/hazards'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import {
   routesToFeatureCollection, ROUTE_COLORS,
   type RouteId, type Route, type LngLat,
@@ -66,6 +67,7 @@ export function MapView({
   centerOverride,
   className,
 }: Props) {
+  const isDesktop = useMediaQuery('(min-width: 768px)')
   const { data: sanctuaries } = useSanctuaries()
   const { data: hazards } = useHazards()
   const [selection, setSelection] = useState<PopupSelection | null>(null)
@@ -148,6 +150,10 @@ export function MapView({
       })),
   }), [sanctuaries])
 
+  const haloRadius = isDesktop ? 
+    ['interpolate', ['linear'], ['zoom'], 10, 6, 13, 22, 15, 55, 17, 130, 19, 280] :
+    ['interpolate', ['linear'], ['zoom'], 10, 4, 13, 14, 15, 35, 17, 80, 19, 150]
+
   return (
     <div className={className} style={{ position: 'relative', width: '100%', height: '100%' }}>
       <Map
@@ -160,7 +166,7 @@ export function MapView({
         onClick={() => select(null)}
       >
         {showControls && (
-          <NavigationControl position="bottom-right" showCompass={false} showZoom={true} />
+          <NavigationControl position="bottom-right" showCompass={false} showZoom={isDesktop} />
         )}
 
         {/* Sanctuary halos */}
@@ -169,12 +175,9 @@ export function MapView({
             id: 'sanctuary-zone-halo',
             type: 'circle',
             paint: {
-              'circle-radius': [
-                'interpolate', ['linear'], ['zoom'],
-                10, 6, 13, 22, 15, 55, 17, 130, 19, 280,
-              ],
+              'circle-radius': haloRadius,
               'circle-color': '#7c3aed',
-              'circle-opacity': 0.12,
+              'circle-opacity': isDesktop ? 0.12 : 0.08,
               'circle-blur': 0.4,
             },
           } as LayerProps)} />
@@ -182,14 +185,11 @@ export function MapView({
             id: 'sanctuary-zone-edge',
             type: 'circle',
             paint: {
-              'circle-radius': [
-                'interpolate', ['linear'], ['zoom'],
-                10, 6, 13, 22, 15, 55, 17, 130, 19, 280,
-              ],
+              'circle-radius': haloRadius,
               'circle-color': 'transparent',
               'circle-stroke-color': '#7c3aed',
               'circle-stroke-width': 1,
-              'circle-stroke-opacity': 0.35,
+              'circle-stroke-opacity': isDesktop ? 0.35 : 0.2,
             },
           } as LayerProps)} />
         </Source>
@@ -200,7 +200,7 @@ export function MapView({
           <Layer {...({
             id: 'routes-casing',
             type: 'line',
-            paint: { 'line-color': '#ffffff', 'line-width': 7, 'line-opacity': 0.9 },
+            paint: { 'line-color': '#ffffff', 'line-width': isDesktop ? 7 : 6, 'line-opacity': 0.9 },
             layout: { 'line-cap': 'round', 'line-join': 'round' },
           } as LayerProps)} />
           <Layer {...({
@@ -210,7 +210,7 @@ export function MapView({
               'line-color': selectedRouteId
                 ? ROUTE_COLORS[selectedRouteId]
                 : ['coalesce', ['get', 'color'], '#7c3aed'],
-              'line-width': 4,
+              'line-width': isDesktop ? 4 : 3.5,
               'line-opacity': selectedRouteId ? 1 : 0.85,
             },
             layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -224,10 +224,13 @@ export function MapView({
             onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'origin', from }) }}
           >
             <div className="flex flex-col items-center group cursor-pointer">
-              <div className="bg-white p-1.5 rounded-full shadow-lg border-2 border-brand-500 group-hover:scale-110 transition-transform">
-                <Navigation size={14} className="text-brand-500 fill-brand-500" />
+              <div className={cn(
+                "bg-white p-1.5 rounded-full shadow-lg border-2 border-brand-500 group-hover:scale-110 transition-transform",
+                !isDesktop && "p-1 border-[1.5px]"
+              )}>
+                <Navigation size={isDesktop ? 14 : 12} className="text-brand-500 fill-brand-500" />
               </div>
-              {from.label === 'Your Current Location' && (
+              {isDesktop && from.label === 'Your Current Location' && (
                 <div className="mt-1 px-2 py-0.5 bg-brand-600 text-white text-[10px] font-bold rounded shadow-sm whitespace-nowrap uppercase tracking-wider">
                   You are here
                 </div>
@@ -243,8 +246,11 @@ export function MapView({
             onClick={(e) => { e.originalEvent.stopPropagation(); select({ kind: 'destination', to }) }}
           >
             <div className="flex flex-col items-center group cursor-pointer">
-              <div className="bg-brand-600 p-1.5 rounded-full shadow-lg border-2 border-white group-hover:scale-110 transition-transform">
-                <MapPinIcon size={16} className="text-white fill-white" />
+              <div className={cn(
+                "bg-brand-600 p-1.5 rounded-full shadow-lg border-2 border-white group-hover:scale-110 transition-transform",
+                !isDesktop && "p-1 border-[1.5px]"
+              )}>
+                <MapPinIcon size={isDesktop ? 16 : 14} className="text-white fill-white" />
               </div>
               <div className="mt-1 px-2 py-0.5 bg-white text-neutral-900 text-[10px] font-bold rounded shadow-sm border border-neutral-100 whitespace-nowrap uppercase tracking-wider">
                 {to.label ?? 'Destination'}
@@ -258,7 +264,10 @@ export function MapView({
           <Marker longitude={from.lng} latitude={from.lat} anchor="center">
             <div className="relative">
               <div className="absolute inset-0 bg-brand-500 rounded-full animate-ping opacity-40" />
-              <div className="relative w-4 h-4 bg-brand-600 rounded-full border-2 border-white shadow-md" />
+              <div className={cn(
+                "relative w-4 h-4 bg-brand-600 rounded-full border-2 border-white shadow-md",
+                !isDesktop && "w-3 h-3 border-[1.5px]"
+              )} />
             </div>
           </Marker>
         )}
@@ -275,9 +284,12 @@ export function MapView({
               <button
                 type="button"
                 aria-label={s.name ?? 'Sanctuary'}
-                className="cursor-pointer block w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300"
+                className={cn(
+                  "cursor-pointer block w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300",
+                  !isDesktop && "w-7 h-7 rounded-lg ring-1"
+                )}
               >
-                <Icon size={18} />
+                <Icon size={isDesktop ? 18 : 14} />
               </button>
             </Marker>
           )
@@ -301,10 +313,11 @@ export function MapView({
                 className={cn(
                   'cursor-pointer block w-7 h-7 rounded-full grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300',
                   tone,
-                  isPending && 'animate-pulse ring-amber-400 ring-offset-2'
+                  isPending && 'animate-pulse ring-amber-400 ring-offset-2',
+                  !isDesktop && "w-5 h-5 ring-1"
                 )}
               >
-                <Icon size={13} />
+                <Icon size={isDesktop ? 13 : 10} />
               </button>
             </Marker>
           )

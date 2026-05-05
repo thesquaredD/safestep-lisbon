@@ -8,7 +8,7 @@ import type { FeatureCollection, LineString } from 'geojson'
 import { supabase } from '@/lib/supabase'
 import { FALLBACK_SANCTUARIES } from './fallback_sanctuaries'
 
-export type RouteId = 'safest' | 'balanced' | 'fastest'
+export type RouteId = 'safer' | 'faster'
 export type RoutingProvider = 'ors' | 'osrm' | 'none'
 
 export type LngLat = { lng: number; lat: number; label?: string }
@@ -36,13 +36,12 @@ export const ORIGIN = DEFAULT_ORIGIN
 export const DESTINATION = DEFAULT_DESTINATION
 
 export const ROUTE_COLORS: Record<RouteId, string> = {
-  safest:   '#22c55e',
-  balanced: '#f59e0b',
-  fastest:  '#ef4444',
+  safer:   '#22c55e',
+  faster:  '#ef4444',
 }
 
-const TONES: Record<RouteId, 'safe' | 'warn' | 'risk'> = { safest: 'safe', balanced: 'warn', fastest: 'risk' }
-const LABELS: Record<RouteId, string> = { safest: 'Safest walking route', balanced: 'Balanced walking route', fastest: 'Fastest walking route' }
+const TONES: Record<RouteId, 'safe' | 'warn' | 'risk'> = { safer: 'safe', faster: 'risk' }
+const LABELS: Record<RouteId, string> = { safer: 'Safer walking route', faster: 'Faster walking route' }
 
 const SCORE_LEVELS = (score: number) => {
   if (score >= 90) return 'Very safe'
@@ -197,24 +196,12 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
           }
         })
 
-        // 1. Identify "Fastest" (primary sort: minutes, secondary: distance)
+        // 1. Identify "Faster" (primary sort: minutes, secondary: distance)
         const fastestRoute = [...scoredRoutes].sort((a, b) => a.minutes - b.minutes || a.km - b.km)[0]
         
-        // 2. Identify "Safest" (primary sort: safety score, secondary: minutes)
+        // 2. Identify "Safer" (primary sort: safety score, secondary: minutes)
         const safestRoute = [...scoredRoutes].sort((a, b) => b.score - a.score || a.minutes - b.minutes)[0]
         
-        // 3. Identify "Balanced" (best compromise: safety + speed)
-        // Normalize time: (MaxTime - current) / (MaxTime - MinTime)
-        const maxTime = Math.max(...scoredRoutes.map(r => r.minutes))
-        const minTime = Math.min(...scoredRoutes.map(r => r.minutes))
-        const timeSpan = maxTime - minTime || 1
-        
-        const balancedRoute = [...scoredRoutes].sort((a, b) => {
-          const scoreA = (a.score * 0.7) + (((maxTime - a.minutes) / timeSpan) * 30)
-          const scoreB = (b.score * 0.7) + (((maxTime - b.minutes) / timeSpan) * 30)
-          return scoreB - scoreA
-        })[0]
-
         const finalRoutes: Route[] = []
         const seenGeometries = new Set<string>()
 
@@ -225,8 +212,6 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
           const geoKey = getGeoKey(r.geometry)
           if (seenGeometries.has(geoKey)) {
             // If geometry is already added, we don't add it again under a different ID
-            // unless we want to label it as "same as safest" etc.
-            // Requirement says: "show only one route option" if only one exists.
             return
           }
           seenGeometries.add(geoKey)
@@ -234,15 +219,13 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
           const safeTotal = r.metrics.verifiedCount + r.metrics.candidateCount
           let why = ''
           
-          if (id === 'safest') {
-            if (safeTotal > 0) why = `Optimal coverage with ${safeTotal} nearby safe spots.`
+          if (id === 'safer') {
+            if (safeTotal > 0) why = `Optimal coverage with ${safeTotal} nearby support points.`
             else why = `Focused on avoiding known hazards and active streets.`
-          } else if (id === 'fastest') {
-            const safetyPenalty = safestRoute.score - r.score
-            if (safetyPenalty > 15) why = `Prioritizes speed over safety coverage (${r.score}/100 score).`
-            else why = `Quickest path with acceptable safety profile.`
           } else {
-            why = `Trade-off: good safety coverage with efficient walking time.`
+            const safetyPenalty = safestRoute.score - r.score
+            if (safetyPenalty > 15) why = `Quickest path, though with fewer safe spots (${r.score}/100 score).`
+            else why = `Quickest path with acceptable safety profile.`
           }
 
           finalRoutes.push({
@@ -256,16 +239,15 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
         }
 
         // Add them in priority order
-        addRoute(safestRoute, 'safest')
-        addRoute(balancedRoute, 'balanced')
-        addRoute(fastestRoute, 'fastest')
+        addRoute(safestRoute, 'safer')
+        addRoute(fastestRoute, 'faster')
 
         // If we only have one route because they were all identical
         if (finalRoutes.length === 1 && routes.length > 1) {
-          finalRoutes[0].summary += " (Only one optimal path found for this trip)."
+          finalRoutes[0].summary += " (Only one optimal pedestrian path found for this trip)."
         }
 
-        const displayOrder: Record<RouteId, number> = { safest: 0, balanced: 1, fastest: 2 }
+        const displayOrder: Record<RouteId, number> = { safer: 0, faster: 1 }
         setState({ 
           data: finalRoutes.sort((a, b) => displayOrder[a.id] - displayOrder[b.id]), 
           loading: false, 

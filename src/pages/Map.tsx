@@ -114,13 +114,13 @@ export function MapPage() {
     hasBothPoints ? to : null
   )
 
-  const [selectedId, setSelectedId] = useState<RouteId>('safest')
+  const [selectedId, setSelectedId] = useState<RouteId>('safer')
   const [showLegend, setShowLegend] = useState(false)
 
   // If the chosen route disappears (e.g. fewer alternatives returned) fall back.
   const routeById = (id: RouteId) => routes?.find(r => r.id === id)
   const selectedRoute = routeById(selectedId) ?? routes?.[0]
-  const selectedIdSafe = selectedRoute?.id ?? 'safest'
+  const selectedIdSafe = selectedRoute?.id ?? 'safer'
 
   /* ───────────────────────── DESKTOP ───────────────────────── */
   if (isDesktop) {
@@ -567,7 +567,7 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
               Why this score?
             </button>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <button 
                 onClick={() => setShowWhy(false)}
                 className="flex items-center gap-2 text-left"
@@ -576,9 +576,37 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
                 <p className="text-[11px] font-bold text-neutral-900">Why this score?</p>
                 <ChevronUp size={12} className="text-neutral-400" />
               </button>
-              <p className="text-[11px] text-neutral-600 leading-relaxed pl-3 italic border-l border-neutral-100">
-                "This route has a {r.score}/100 safety rating. {r.summary} It focuses on well-lit, active streets to maximize visibility."
-              </p>
+              
+              <div className="space-y-2 pl-3 border-l-2 border-brand-100">
+                <p className="text-[11px] text-neutral-600 leading-relaxed italic">
+                  "This route has a <strong>{r.score}/100</strong> safety rating. {r.summary}"
+                </p>
+                <div className="space-y-1.5">
+                  <p className="text-[10px] text-neutral-500 leading-normal">
+                    The score is an automated estimate based on:
+                  </p>
+                  <ul className="text-[10px] text-neutral-500 space-y-1 ml-1">
+                    <li className="flex items-start gap-1.5">
+                      <Shield size={10} className="text-emerald-500 mt-0.5 shrink-0" />
+                      <span><strong>Verified Sanctuaries:</strong> Trusted, vetted safe spots.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <Coffee size={10} className="text-brand-400 mt-0.5 shrink-0" />
+                      <span><strong>Candidate Spots:</strong> Public places still needing verification.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <AlertTriangle size={10} className="text-amber-500 mt-0.5 shrink-0" />
+                      <span><strong>Reported Hazards:</strong> Known issues like poor lighting.</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="bg-amber-50 p-2 rounded-lg border border-amber-100/50 mt-1">
+                  <p className="text-[9px] text-amber-700 font-medium leading-tight">
+                    <strong>Note:</strong> This is a prototype safety estimate, not a guarantee of safety. Always stay aware of your surroundings.
+                  </p>
+                </div>
+              </div>
+
               <div className="flex gap-4 mt-1 pl-3">
                 <div className="flex items-center gap-1">
                   <div className="w-1.5 h-1.5 rounded-full bg-safe" />
