@@ -53,9 +53,6 @@ export function getRouteColor(score: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
-const TONES: Record<RouteId, 'safe' | 'warn' | 'risk'> = { safer: 'safe', faster: 'risk' }
-const LABELS: Record<RouteId, string> = { safer: 'Safer walking route', faster: 'Faster walking route' }
-
 const SCORE_LEVELS = (score: number) => {
   if (score >= 90) return 'Very safe'
   if (score >= 70) return 'Safer'
@@ -216,53 +213,54 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
         const safestRoute = [...scoredRoutes].sort((a, b) => b.score - a.score || a.minutes - b.minutes)[0]
         
         const finalRoutes: Route[] = []
-        const seenGeometries = new Set<string>()
-
+        
         // Helper to stringify geometry for comparison
         const getGeoKey = (g: LineString) => JSON.stringify(g.coordinates.slice(0, 5)) + g.coordinates.length
+        
+        const fastestKey = getGeoKey(fastestRoute.geometry)
+        const safestKey = getGeoKey(safestRoute.geometry)
 
-        const addRoute = (r: typeof scoredRoutes[0], id: RouteId) => {
-          const geoKey = getGeoKey(r.geometry)
-          if (seenGeometries.has(geoKey)) {
-            // If geometry is already added, we don't add it again under a different ID
-            return
-          }
-          seenGeometries.add(geoKey)
-
-          const safeTotal = r.metrics.verifiedCount + r.metrics.candidateCount
-          let why = ''
-          
-          if (id === 'safer') {
-            if (safeTotal > 0) why = `Optimal coverage with ${safeTotal} nearby support points.`
-            else why = `Focused on avoiding known hazards and active streets.`
-          } else {
-            const safetyPenalty = safestRoute.score - r.score
-            if (safetyPenalty > 15) why = `Quickest path, though with fewer safe spots (${r.score}/100 score).`
-            else why = `Quickest path with acceptable safety profile.`
-          }
+        if (fastestKey === safestKey) {
+          // If fastest and safest are the same geometry (or only 1 route total)
+          const isOnlyOne = routes.length === 1
+          const label = isOnlyOne 
+            ? "Only one walking route found" 
+            : "Fastest route — also the safest option"
+          const summaryText = isOnlyOne
+            ? "It is currently the fastest and safest available option."
+            : "For this trip, the quickest route also has the highest safety score."
 
           finalRoutes.push({
-            ...r,
-            id,
-            label: LABELS[id],
-            tone: TONES[id],
+            ...fastestRoute,
+            id: 'faster',
+            label,
+            tone: 'safe',
             provider,
-            summary: `${r.level} — ${why}`
+            summary: `${fastestRoute.level} — ${summaryText}`
+          } as Route)
+        } else {
+          // Different geometries - Show Fastest first, then Safer
+          finalRoutes.push({
+            ...fastestRoute,
+            id: 'faster',
+            label: 'Fastest route',
+            tone: 'risk',
+            provider,
+            summary: `${fastestRoute.level} — Quickest path to destination.`
+          } as Route)
+
+          finalRoutes.push({
+            ...safestRoute,
+            id: 'safer',
+            label: 'Safer route',
+            tone: 'safe',
+            provider,
+            summary: `${safestRoute.level} — Optimized for safety and support points.`
           } as Route)
         }
 
-        // Add them in priority order
-        addRoute(safestRoute, 'safer')
-        addRoute(fastestRoute, 'faster')
-
-        // If we only have one route because they were all identical
-        if (finalRoutes.length === 1 && routes.length > 1) {
-          finalRoutes[0].summary += " (Only one optimal pedestrian path found for this trip)."
-        }
-
-        const displayOrder: Record<RouteId, number> = { safer: 0, faster: 1 }
         setState({ 
-          data: finalRoutes.sort((a, b) => displayOrder[a.id] - displayOrder[b.id]), 
+          data: finalRoutes, 
           loading: false, 
           error: null,
           provider

@@ -551,16 +551,18 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
       <button
         onClick={onClick}
         className={cn(
-          'flex items-center gap-3 rounded-xl border p-3 text-left transition w-full',
+          'flex items-center rounded-xl border text-left transition w-full',
+          isDesktop ? 'gap-3 p-3' : 'gap-2 p-2',
           active ? 'bg-brand-50 border-brand-300 shadow-sm' : 'border-neutral-200 hover:bg-neutral-50',
         )}
       >
         <ScoreBadge score={r.score} />
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <div className="font-semibold text-[14px]">{r.label}</div>
+            <div className={cn("font-semibold", isDesktop ? "text-[14px]" : "text-[13px]")}>{r.label}</div>
             <span className={cn(
-              "text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tight",
+              "px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tight",
+              isDesktop ? "text-[9px]" : "text-[8px]",
               r.score >= 90 ? "bg-brand-100 text-brand-700" : 
               r.score >= 70 ? "bg-brand-200 text-brand-800" : 
               "bg-brand-300 text-brand-900"
@@ -568,14 +570,14 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
               {getScoreLabel(r.score)}
             </span>
           </div>
-          <div className="text-xs text-neutral-500">
+          <div className={cn("text-neutral-500", isDesktop ? "text-xs" : "text-[11px]")}>
             {r.minutes} min · {r.km} km
             <span className="mx-1.5 text-neutral-300">·</span>
             <span className="font-medium text-brand-600 uppercase text-[9px] tracking-wider">{providerLabel}</span>
           </div>
           {isDesktop && r.summary && <div className="text-[10px] text-brand-600 font-medium mt-0.5 line-clamp-1 italic">{r.summary}</div>}
         </div>
-        <ChevronDown size={18} className={cn('text-neutral-400 transition', active && 'rotate-180 text-brand-500')} />
+        <ChevronDown size={isDesktop ? 18 : 16} className={cn('text-neutral-400 transition', active && 'rotate-180 text-brand-500')} />
       </button>
       
       {active && (
@@ -648,6 +650,7 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
 }
 
 function RouteOptionsHeader({ provider }: { provider: string }) {
+  const isDesktop = useMediaQuery('(min-width: 768px)')
   const providerLabel = provider === 'ors' 
     ? 'OpenRouteService walking route' 
     : provider === 'osrm' 
@@ -655,14 +658,15 @@ function RouteOptionsHeader({ provider }: { provider: string }) {
       : ''
 
   return (
-    <div className="flex flex-col mb-3">
+    <div className={cn("flex flex-col", isDesktop ? "mb-3" : "mb-1.5")}>
       <div className="flex items-baseline justify-between">
-        <h2 className="font-display text-[16px] font-medium text-[#14101c]">Route Options</h2>
-        <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">Lisboa</span>
+        <h2 className={cn("font-display font-medium text-[#14101c]", isDesktop ? "text-[16px]" : "text-[14px]")}>Route Options</h2>
+        {isDesktop && <span className="text-[10px] uppercase tracking-[0.14em] text-neutral-400">Lisboa</span>}
       </div>
       {providerLabel && (
         <span className={cn(
-          "text-[10px] font-bold uppercase tracking-wider mt-1",
+          "font-bold uppercase tracking-wider",
+          isDesktop ? "text-[10px] mt-1" : "text-[8px] mt-0.5",
           provider === 'ors' ? "text-brand-600" : "text-brand-400"
         )}>
           {providerLabel}
