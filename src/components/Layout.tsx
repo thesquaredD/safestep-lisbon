@@ -65,7 +65,8 @@ export function Layout() {
 
   const isMapPage = location.pathname === '/map'
   const isWalkPage = location.pathname === '/walk'
-  const showSOS = location.pathname !== '/onboarding' && !isMapPage
+  // Hide SOS and Feedback on Map page to keep the interface clean and avoid covering routes
+  const showGlobalButtons = location.pathname !== '/onboarding' && !isMapPage
 
   return (
     <div className="phone-frame flex flex-col h-svh bg-surface overflow-hidden relative">
@@ -74,12 +75,12 @@ export function Layout() {
         <Outlet />
         
         {/* Global SOS Button (Mobile) */}
-        {showSOS && (
+        {showGlobalButtons && (
           <button
             onClick={() => setIsEmergencyOpen(true)}
             className={cn(
               "fixed left-4 z-40 w-14 h-14 rounded-full bg-risk text-white grid place-items-center shadow-lg shadow-red-500/40 active:scale-90 transition-transform",
-              (isMapPage || isWalkPage) ? "bottom-24" : "bottom-20"
+              isWalkPage ? "bottom-24" : "bottom-20"
             )}
             aria-label="Emergency SOS"
           >
@@ -88,12 +89,12 @@ export function Layout() {
         )}
 
         {/* Global Feedback Button (Mobile Floating) */}
-        {showSOS && (
+        {showGlobalButtons && (
           <button
             onClick={() => setIsFeedbackOpen(true)}
             className={cn(
               "fixed right-4 z-40 w-12 h-12 rounded-full bg-neutral-900 text-white grid place-items-center shadow-lg shadow-black/20 active:scale-90 transition-transform",
-              (isMapPage || isWalkPage) ? "bottom-24" : "bottom-20"
+              isWalkPage ? "bottom-24" : "bottom-20"
             )}
             aria-label="Give Feedback"
             title="Give Feedback"

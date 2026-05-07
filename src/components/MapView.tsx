@@ -303,11 +303,11 @@ export function MapView({
                 type="button"
                 aria-label={s.name ?? 'Sanctuary'}
                 className={cn(
-                  "cursor-pointer block w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300",
-                  !isDesktop && "w-7 h-7 rounded-lg ring-1"
+                  "cursor-pointer block rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300",
+                  isDesktop ? "w-9 h-9" : "w-5 h-5 rounded-md ring-1"
                 )}
               >
-                <Icon size={isDesktop ? 18 : 14} />
+                <Icon size={isDesktop ? 18 : 11} />
               </button>
             </Marker>
           )
@@ -329,13 +329,13 @@ export function MapView({
                 type="button"
                 aria-label={h.title ?? 'Hazard'}
                 className={cn(
-                  'cursor-pointer block w-7 h-7 rounded-full grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300',
+                  'cursor-pointer block rounded-full grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300',
                   tone,
-                  isPending && 'animate-pulse ring-amber-400 ring-offset-2',
-                  !isDesktop && "w-5 h-5 ring-1"
+                  isDesktop ? "w-7 h-7" : "w-4 h-4 ring-1",
+                  isPending && 'animate-pulse ring-amber-400 ring-offset-2'
                 )}
               >
-                <Icon size={isDesktop ? 13 : 10} />
+                <Icon size={isDesktop ? 13 : 8} />
               </button>
             </Marker>
           )
