@@ -19,7 +19,7 @@ import { useSanctuaries, type Sanctuary } from '@/data/sanctuaries'
 import { useHazards, type Hazard } from '@/data/hazards'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import {
-  routesToFeatureCollection, ROUTE_COLORS,
+  routesToFeatureCollection,
   type RouteId, type Route, type LngLat,
 } from '@/data/routes'
 import { MapPopup, type PopupSelection } from './MapPopup'
@@ -200,18 +200,36 @@ export function MapView({
           <Layer {...({
             id: 'routes-casing',
             type: 'line',
-            paint: { 'line-color': '#ffffff', 'line-width': isDesktop ? 7 : 6, 'line-opacity': 0.9 },
+            paint: { 
+              'line-color': '#ffffff', 
+              'line-width': [
+                'case',
+                ['get', 'selected'], isDesktop ? 8 : 7,
+                selectedRouteId ? (isDesktop ? 4 : 3.5) : (isDesktop ? 7 : 6)
+              ],
+              'line-opacity': [
+                'case',
+                ['get', 'selected'], 0.9,
+                selectedRouteId ? 0.3 : 0.8,
+              ]
+            },
             layout: { 'line-cap': 'round', 'line-join': 'round' },
           } as LayerProps)} />
           <Layer {...({
             id: 'routes',
             type: 'line',
             paint: {
-              'line-color': selectedRouteId
-                ? ROUTE_COLORS[selectedRouteId]
-                : ['coalesce', ['get', 'color'], '#7c3aed'],
-              'line-width': isDesktop ? 4 : 3.5,
-              'line-opacity': selectedRouteId ? 1 : 0.85,
+              'line-color': '#7c3aed',
+              'line-width': [
+                'case',
+                ['get', 'selected'], isDesktop ? 5 : 4.5,
+                selectedRouteId ? (isDesktop ? 2.5 : 2) : (isDesktop ? 4 : 3.5)
+              ],
+              'line-opacity': [
+                'case',
+                ['get', 'selected'], 1,
+                selectedRouteId ? 0.4 : 0.85
+              ],
             },
             layout: { 'line-cap': 'round', 'line-join': 'round' },
           } as LayerProps)} />

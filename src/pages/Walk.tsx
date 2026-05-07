@@ -74,7 +74,7 @@ export function WalkPage() {
           <p className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider leading-none mb-1">Walking to</p>
           <p className="font-bold text-sm text-[#14101c] truncate">{to.label}</p>
         </div>
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-bold uppercase tracking-wider">
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-brand-50 text-brand-700 text-[10px] font-bold uppercase tracking-wider">
           <Shield size={10} /> Active Guidance
         </div>
       </div>
@@ -98,7 +98,7 @@ export function WalkPage() {
           <div className="absolute top-4 right-4 z-10">
             <span className={cn(
               "px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider shadow-sm border",
-              routingProvider === 'ors' ? "bg-white text-emerald-600 border-emerald-100" : "bg-white text-amber-600 border-amber-100"
+              routingProvider === 'ors' ? "bg-white text-brand-600 border-brand-100" : "bg-white text-brand-400 border-brand-100"
             )}>
               {routingProvider === 'ors' ? 'OpenRouteService' : 'Fallback route'}
             </span>
@@ -222,7 +222,7 @@ export function WalkPage() {
 }
 
 function Stat({ icon: Icon, label, value, tone }: { icon: React.ElementType; label: string; value: string; tone: 'safe' | 'warn' | 'risk' }) {
-  const dot = tone === 'safe' ? 'bg-safe' : tone === 'warn' ? 'bg-warn' : 'bg-risk'
+  const dot = tone === 'safe' ? 'bg-brand-500' : tone === 'warn' ? 'bg-brand-300' : 'bg-brand-800'
   return (
     <div className="rounded-2xl bg-neutral-50 px-3 py-2.5 border border-neutral-100">
       <p className="text-[9px] uppercase font-bold tracking-widest text-neutral-400 flex items-center gap-1 mb-0.5">

@@ -11,7 +11,7 @@ import { SearchBar } from '@/components/SearchBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useLocation } from '@/lib/useLocation'
 import {
-  useRoutes,
+  useRoutes, getRouteColor,
   type LngLat, type RouteId, type Route,
 } from '@/data/routes'
 
@@ -454,10 +454,13 @@ export function MapPage() {
             <div className="px-4 py-3 flex items-center justify-between">
               {selectedRoute ? (
                 <div className="flex items-center gap-4 flex-1">
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl grid place-items-center text-white font-bold text-sm shadow-sm",
-                    selectedRoute.tone === 'safe' ? 'bg-safe' : selectedRoute.tone === 'warn' ? 'bg-warn' : 'bg-risk'
-                  )}>
+                  <div 
+                    className="w-10 h-10 rounded-xl grid place-items-center font-bold text-sm shadow-sm"
+                    style={{ 
+                      backgroundColor: getRouteColor(selectedRoute.score),
+                      color: selectedRoute.score >= 70 ? '#2e1065' : '#ffffff' 
+                    }}
+                  >
                     {selectedRoute.score}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -503,11 +506,18 @@ export function MapPage() {
    Shared building blocks
    ───────────────────────────────────────────────────────────────────────── */
 
-function ScoreBadge({ score, tone }: { score: number; tone: 'safe' | 'warn' | 'risk' }) {
-  const bg = tone === 'safe' ? 'bg-safe' : tone === 'warn' ? 'bg-warn' : 'bg-risk'
+function ScoreBadge({ score }: { score: number }) {
+  const bgColor = getRouteColor(score)
+  // Higher score = lighter background -> dark text
+  // Lower score = darker background -> white text
+  const textColor = score >= 70 ? 'text-brand-950' : 'text-white'
+  
   return (
     <div className="flex flex-col items-center gap-1 shrink-0">
-      <span className={cn('w-10 h-10 grid place-items-center rounded-lg text-white font-bold text-sm tabular-nums shadow-sm', bg)}>
+      <span 
+        className={cn('w-10 h-10 grid place-items-center rounded-lg font-bold text-sm tabular-nums shadow-sm', textColor)}
+        style={{ backgroundColor: bgColor }}
+      >
         {score}
       </span>
       <span className="text-[8px] uppercase font-bold tracking-tighter text-neutral-400">Score</span>
@@ -542,13 +552,15 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
           active ? 'bg-brand-50 border-brand-300 shadow-sm' : 'border-neutral-200 hover:bg-neutral-50',
         )}
       >
-        <ScoreBadge score={r.score} tone={r.tone} />
+        <ScoreBadge score={r.score} />
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <div className="font-semibold text-[14px]">{r.label}</div>
             <span className={cn(
               "text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tight",
-              r.tone === 'safe' ? "bg-emerald-100 text-emerald-700" : r.tone === 'warn' ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"
+              r.score >= 90 ? "bg-brand-100 text-brand-700" : 
+              r.score >= 70 ? "bg-brand-200 text-brand-800" : 
+              "bg-brand-300 text-brand-900"
             )}>
               {getScoreLabel(r.score)}
             </span>
@@ -594,7 +606,7 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
                   </p>
                   <ul className="text-[10px] text-neutral-500 space-y-1 ml-1">
                     <li className="flex items-start gap-1.5">
-                      <Shield size={10} className="text-emerald-500 mt-0.5 shrink-0" />
+                      <Shield size={10} className="text-brand-500 mt-0.5 shrink-0" />
                       <span><strong>Verified Sanctuaries:</strong> Trusted, vetted safe spots.</span>
                     </li>
                     <li className="flex items-start gap-1.5">
@@ -602,13 +614,13 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
                       <span><strong>Candidate Spots:</strong> Public places still needing verification.</span>
                     </li>
                     <li className="flex items-start gap-1.5">
-                      <AlertTriangle size={10} className="text-amber-500 mt-0.5 shrink-0" />
+                      <AlertTriangle size={10} className="text-brand-300 mt-0.5 shrink-0" />
                       <span><strong>Reported Hazards:</strong> Known issues like poor lighting.</span>
                     </li>
                   </ul>
                 </div>
-                <div className="bg-amber-50 p-2 rounded-lg border border-amber-100/50 mt-1">
-                  <p className="text-[9px] text-amber-700 font-medium leading-tight">
+                <div className="bg-brand-50 p-2 rounded-lg border border-brand-100 mt-1">
+                  <p className="text-[9px] text-brand-700 font-medium leading-tight">
                     <strong>Note:</strong> This is a prototype safety estimate, not a guarantee of safety. Always stay aware of your surroundings.
                   </p>
                 </div>
@@ -616,11 +628,11 @@ function RouteRow({ r, active, onClick }: { r: Route; active: boolean; onClick: 
 
               <div className="flex gap-4 mt-1 pl-3">
                 <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-safe" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-500" />
                   <span className="text-[9px] text-neutral-500">Safe Spot</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-warn" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-brand-300" />
                   <span className="text-[9px] text-neutral-500">Hazard</span>
                 </div>
               </div>
@@ -648,7 +660,7 @@ function RouteOptionsHeader({ provider }: { provider: string }) {
       {providerLabel && (
         <span className={cn(
           "text-[10px] font-bold uppercase tracking-wider mt-1",
-          provider === 'ors' ? "text-emerald-600" : "text-amber-600"
+          provider === 'ors' ? "text-brand-600" : "text-brand-400"
         )}>
           {providerLabel}
         </span>
@@ -832,7 +844,7 @@ function RouteOptionsCard({
             {provider !== 'none' && !loading && (
               <span className={cn(
                 "text-[9px] font-bold uppercase tracking-wider mt-0.5",
-                provider === 'ors' ? "text-emerald-600" : "text-amber-600"
+                provider === 'ors' ? "text-brand-600" : "text-brand-400"
               )}>
                 {provider === 'ors' ? 'OpenRouteService walking route' : 'Prototype fallback route'}
               </span>
@@ -884,7 +896,7 @@ function LegendCard({ onClose, compact = false }: { onClose: () => void; compact
         <LegendRow color="bg-gradient-to-br from-brand-500 to-brand-700" icon={Cross}  label="Pharmacy · sanctuary" />
         <LegendRow color="bg-gradient-to-br from-brand-500 to-brand-700" icon={Beer}   label="Bar · sanctuary" />
         <LegendRow color="bg-gradient-to-br from-brand-500 to-brand-700" icon={Store}  label="Store · sanctuary" />
-        <LegendRow color="bg-warn"                                         icon={Lightbulb} label="Hazard report" />
+        <LegendRow color="bg-brand-300"                                         icon={Lightbulb} label="Hazard report" />
       </ul>
       <p className="mt-3 text-neutral-500 leading-relaxed">
         The soft purple ring is the ~80m sanctuary radius — within it you're inside a

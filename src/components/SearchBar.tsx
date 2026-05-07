@@ -79,10 +79,15 @@ export function SearchBar({
   // Common inner content to ensure consistency between fixed/absolute modes
   const renderDropdownContent = () => (
     <div className="flex-1 overflow-y-auto bg-white border-t border-black/5 min-h-[100px]">
-      {/* VISIBLE DEBUG OVERLAY (Temporary) */}
-      <div className="bg-brand-50/50 px-5 py-2 text-[10px] font-mono text-brand-600 border-b border-brand-100 flex justify-between items-center">
-        <span>DEBUG: {loading ? 'SEARCHING...' : error ? 'ERROR' : `${hits?.length ?? 0} HITS`}</span>
-        {query.length > 0 && <span className="opacity-50">"{query}"</span>}
+      {/* Search Status */}
+      <div className="bg-brand-50/50 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-brand-600 border-b border-brand-100 flex justify-between items-center">
+        <span>
+          {loading ? 'Searching...' : 
+           error ? 'Search service unavailable. Try again.' : 
+           (hits?.length ?? 0) > 0 ? 'Matches found' : 
+           'No matches found. Try a more specific place or street.'}
+        </span>
+        {query.length > 0 && <span className="opacity-50 lowercase font-normal italic">"{query}"</span>}
       </div>
 
       {loading && (

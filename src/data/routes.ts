@@ -35,9 +35,22 @@ export const DEFAULT_DESTINATION: LngLat = {
 export const ORIGIN = DEFAULT_ORIGIN
 export const DESTINATION = DEFAULT_DESTINATION
 
-export const ROUTE_COLORS: Record<RouteId, string> = {
-  safer:   '#22c55e',
-  faster:  '#ef4444',
+/**
+ * Maps a safety score to a purple shade.
+ * Higher score = brighter/lighter purple.
+ * Lower score = deeper/darker purple.
+ * Gradient: #1b1026 (0) to #d8b4fe (100)
+ */
+export function getRouteColor(score: number): string {
+  const s = Math.max(0, Math.min(100, score))
+  const t = s / 100
+
+  // Linearly interpolate between #1b1026 (27, 16, 38) and #d8b4fe (216, 180, 254)
+  const r = Math.round(27 + 189 * t)
+  const g = Math.round(16 + 164 * t)
+  const b = Math.round(38 + 216 * t)
+
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
 }
 
 const TONES: Record<RouteId, 'safe' | 'warn' | 'risk'> = { safer: 'safe', faster: 'risk' }
@@ -375,14 +388,21 @@ export function routesToFeatureCollection(
   routes: Route[],
   selectedId?: RouteId,
 ): FeatureCollection<LineString> {
-  const list = selectedId
-    ? routes.filter(r => r.id === selectedId)
-    : routes
+  // Always show all routes, but sort the selected one to the end so it draws on top
+  const sorted = [...routes].sort((a, b) => {
+    if (a.id === selectedId) return 1
+    if (b.id === selectedId) return -1
+    return 0
+  })
+
   return {
     type: 'FeatureCollection',
-    features: list.map(r => ({
+    features: sorted.map(r => ({
       type: 'Feature',
-      properties: { id: r.id, color: ROUTE_COLORS[r.id] },
+      properties: { 
+        id: r.id, 
+        selected: r.id === selectedId
+      },
       geometry: r.geometry,
     })),
   }

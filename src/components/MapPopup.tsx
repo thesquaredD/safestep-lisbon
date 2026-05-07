@@ -185,7 +185,7 @@ function renderable(
       eyebrow: label,
       tag: statusText,
       tagClass: s.status === 'candidate' 
-        ? 'bg-amber-100 text-amber-700' 
+        ? 'bg-brand-50 text-brand-600' 
         : 'bg-brand-100 text-brand-700',
       address: s.address ?? undefined,
       body: s.description ?? undefined,
@@ -209,9 +209,9 @@ function renderable(
     : h.kind === 'unsafe_crossing' ? AlertCircle
     : AlertTriangle
   const tagClass =
-    h.status === 'resolved' ? 'bg-emerald-50 text-emerald-700'
-    : h.status === 'verified' ? 'bg-amber-50 text-amber-700'
-    : 'bg-amber-50 text-amber-700'
+    h.status === 'resolved' ? 'bg-brand-50 text-brand-700'
+    : h.status === 'verified' ? 'bg-brand-100 text-brand-800'
+    : 'bg-brand-100 text-brand-800'
   return {
     lng: h.lng, lat: h.lat, offset: 18,
     icon: Icon,
