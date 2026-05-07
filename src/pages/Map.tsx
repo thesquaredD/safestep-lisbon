@@ -59,6 +59,13 @@ export function MapPage() {
     return null
   })
 
+  // Auto-request location if we have a destination but no start
+  useEffect(() => {
+    if (to && !from && locationStatus === 'prompt') {
+      requestLocation()
+    }
+  }, [to, from, locationStatus, requestLocation])
+
   // Initial mount sync - location hook fallback
   useEffect(() => {
     if (!from && coords) {
@@ -137,9 +144,9 @@ export function MapPage() {
           centerOverride={mapCenter ?? undefined}
         />
 
-        {/* Floating search */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[520px] z-20 flex flex-col gap-2">
-          <div className="bg-surface/98 backdrop-blur-md rounded-2xl border border-black/5 shadow-[var(--shadow-float)] overflow-hidden">
+        {/* Universal Floating Search Area */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[520px] z-50 flex flex-col gap-2">
+          <div className="bg-surface/98 backdrop-blur-md rounded-2xl border border-black/5 shadow-[var(--shadow-float)]">
             <div className="p-3 flex items-center gap-3">
               {/* Start Input (Desktop) */}
               <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-neutral-50 rounded-xl border border-neutral-100 cursor-pointer" onClick={() => setIsChoosingStart(true)}>
@@ -159,7 +166,7 @@ export function MapPage() {
                   destination={to as LngLat}
                   onDestinationChange={setTo}
                   className="p-0"
-                  isMinimal
+                  isMinimal={false}
                   placeholder="Where to?"
                   triggerOpen={searchTrigger}
                 />
@@ -180,7 +187,7 @@ export function MapPage() {
 
           {/* Location Picker Overlay (Desktop) */}
           {isChoosingStart && (
-            <div className="bg-white rounded-2xl shadow-2xl border border-brand-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl border border-brand-100 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
               <div className="p-4 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
                 <h3 className="font-bold text-brand-900 text-sm">Choose starting point</h3>
                 <button onClick={() => setIsChoosingStart(false)} className="text-neutral-400 p-1 hover:bg-black/5 rounded-full transition">
@@ -193,7 +200,7 @@ export function MapPage() {
                   destination={from as LngLat}
                   onDestinationChange={(d) => { setFrom(d); setIsChoosingStart(false) }}
                   className="p-0 shadow-none border-neutral-200 bg-neutral-50 rounded-xl"
-                  isMinimal
+                  isMinimal={false}
                   placeholder="Search start address..."
                 />
               </div>
@@ -269,8 +276,8 @@ export function MapPage() {
         />
         
         {/* Ultra-Compact Floating Search Area */}
-        <div className="absolute top-3 inset-x-3 z-10 flex flex-col gap-2">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-black/5 shadow-xl overflow-hidden">
+        <div className="absolute top-3 inset-x-3 z-50 flex flex-col gap-2">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-black/5 shadow-xl">
             <div className="p-1.5 flex flex-col gap-1">
               {/* Start Input (Minimal) */}
               <button
@@ -298,7 +305,7 @@ export function MapPage() {
                     destination={to as LngLat}
                     onDestinationChange={(d) => { setTo(d); setDrawerExpanded(true) }}
                     className="p-0 text-[12px]"
-                    isMinimal
+                    isMinimal={true}
                     placeholder="Where to?"
                     triggerOpen={searchTrigger}
                   />
@@ -309,7 +316,7 @@ export function MapPage() {
 
           {/* Location Picker Overlay (Overlaying the map) */}
           {isChoosingStart && (
-            <div className="bg-white rounded-2xl shadow-2xl border border-brand-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl border border-brand-100 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
               <div className="p-3 bg-brand-50 border-b border-brand-100 flex items-center justify-between">
                 <h3 className="font-bold text-brand-900 text-sm">Starting point</h3>
                 <button onClick={() => setIsChoosingStart(false)} className="text-neutral-400 p-1 hover:bg-black/5 rounded-full transition">
@@ -322,7 +329,7 @@ export function MapPage() {
                   destination={from as LngLat}
                   onDestinationChange={(d) => { setFrom(d); setIsChoosingStart(false) }}
                   className="p-0 shadow-none border-neutral-200 bg-neutral-50 rounded-xl"
-                  isMinimal
+                  isMinimal={true}
                   placeholder="Type starting point..."
                 />
               </div>
@@ -678,31 +685,67 @@ function RouteList({
       </button>
     )
   }
+
   if (error) {
     return (
-      <div className="flex flex-col gap-2">
-        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm p-3 font-medium">
-          Routing failed. {error}
+      <div className="flex flex-col gap-3 py-4 text-center">
+        <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-full grid place-items-center mx-auto shadow-sm">
+          <AlertTriangle size={24} />
         </div>
-        <div className="text-[10px] text-neutral-400 uppercase tracking-widest text-center">
-          No routing available
+        <div>
+          <p className="font-bold text-neutral-900">Routing failed</p>
+          <p className="text-xs text-neutral-500 px-4 mt-1">Couldn't calculate route. {error}. Try again or choose another start.</p>
         </div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mx-auto mt-2 px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-xs font-bold rounded-lg transition"
+        >
+          Try Again
+        </button>
       </div>
     )
   }
+
   if (loading && !routes) {
     return (
       <div className="flex flex-col gap-2">
         {[0, 1, 2].map(i => (
-          <div key={i} className="h-[64px] rounded-xl bg-neutral-100 animate-pulse" />
+          <div key={i} className="h-[64px] rounded-xl bg-neutral-100 animate-pulse flex items-center px-4 gap-3">
+             <div className="w-10 h-10 rounded-lg bg-neutral-200" />
+             <div className="flex-1 space-y-2">
+                <div className="h-3 w-2/3 bg-neutral-200 rounded" />
+                <div className="h-2 w-1/3 bg-neutral-200 rounded" />
+             </div>
+          </div>
         ))}
+        <p className="text-[10px] text-center text-neutral-400 font-bold uppercase tracking-widest mt-2 animate-pulse">Calculating safest path...</p>
       </div>
     )
   }
-  if (routes && routes.length === 0 && !loading) {
-    return (
-      <p className="text-sm text-neutral-500">No walking routes found between these points.</p>
-    )
+
+  if (!routes || routes.length === 0) {
+    if (!loading) {
+      return (
+        <div className="flex flex-col gap-3 py-6 text-center">
+          <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-full grid place-items-center mx-auto">
+            <Compass size={24} className="animate-pulse" />
+          </div>
+          <div>
+            <p className="font-bold text-neutral-900 text-sm">Waiting for start point</p>
+            <p className="text-[11px] text-neutral-500 px-8 mt-1 leading-relaxed">
+              We have your destination, but we need to know where you're starting from to calculate the route.
+            </p>
+          </div>
+          <button 
+            onClick={onSearchClick}
+            className="mx-auto px-4 py-2.5 bg-brand-600 text-white text-xs font-bold rounded-xl shadow-md active:scale-95 transition"
+          >
+            Select Start Point
+          </button>
+        </div>
+      )
+    }
+    return null
   }
 
   return (
@@ -712,7 +755,7 @@ function RouteList({
           <strong>OpenRouteService failed</strong> — using prototype fallback route.
         </div>
       )}
-      {routes && routes.map(r => (
+      {routes.map(r => (
         <RouteRow key={r.id} r={r} active={selectedId === r.id} onClick={() => onSelect(r.id)} />
       ))}
     </div>
