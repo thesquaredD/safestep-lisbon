@@ -276,35 +276,34 @@ export function MapPage() {
         />
         
         {/* Ultra-Compact Floating Search Area */}
-        <div className="absolute top-2 inset-x-2 z-50 flex flex-col gap-1.5">
-          <div className="bg-white/95 backdrop-blur-md rounded-xl border border-black/5 shadow-lg">
-            <div className="p-1 flex flex-col gap-0.5">
+        <div className="absolute top-2 inset-x-2 z-50 flex flex-col gap-1">
+          <div className="bg-white/95 backdrop-blur-md rounded-lg border border-neutral-100 shadow-sm">
+            <div className="p-0.5 flex flex-col gap-0">
               {/* Start Input (Minimal) */}
               <button
                 onClick={() => setIsChoosingStart(true)}
-                className="flex items-center gap-2 px-2 py-1 bg-neutral-50/50 rounded-lg text-left transition"
+                className="flex items-center gap-2 px-2 py-0.5 bg-neutral-50/30 rounded-t-lg text-left transition"
               >
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0" />
+                <div className="w-1 h-1 rounded-full bg-brand-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] text-neutral-500 truncate">
-                    {from?.label === 'Your Current Location' ? 'My Current Location' : (from?.label ?? 'Starting point...')}
+                  <div className="text-[10px] text-neutral-400 font-medium truncate uppercase tracking-tighter">
+                    {from?.label === 'Your Current Location' ? 'My Current Location' : (from?.label ?? 'From...')}
                   </div>
                 </div>
-                {from?.label === 'Your Current Location' && (
-                  <Compass size={10} className="text-brand-500 animate-pulse shrink-0" />
-                )}
               </button>
 
+              <div className="h-px bg-neutral-100 mx-1" />
+
               {/* Destination Input (Minimal) */}
-              <div className="flex items-center gap-2 px-2 py-1 transition">
-                <MapPinIcon size={11} className="text-brand-500 shrink-0" />
+              <div className="flex items-center gap-2 px-2 py-0.5 transition">
+                <MapPinIcon size={10} className="text-brand-500 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <SearchBar
                     destination={to as LngLat}
                     onDestinationChange={(d) => { setTo(d); setDrawerExpanded(true) }}
-                    className="p-0 text-[12px]"
+                    className="p-0 text-[12px] h-7"
                     isMinimal={true}
-                    placeholder="Search destination..."
+                    placeholder="Where to?"
                     triggerOpen={searchTrigger}
                   />
                 </div>
@@ -363,20 +362,15 @@ export function MapPage() {
         </div>
 
         {!from && !routesLoading && (
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] z-20 grid place-items-center p-6 text-center">
-            <div className="bg-white p-5 rounded-2xl shadow-xl border border-neutral-100 max-w-xs animate-in zoom-in duration-300">
-              <div className="w-10 h-10 bg-brand-50 text-brand-600 rounded-xl grid place-items-center mx-auto mb-3">
-                <Compass size={20} className="animate-pulse" />
-              </div>
-              <h3 className="font-bold text-neutral-900 text-sm mb-1">Set Starting Point</h3>
-              <p className="text-[11px] text-neutral-500 mb-4 leading-relaxed">
-                Choose a location or enable GPS to calculate your safest route.
-              </p>
+          <div className="absolute top-24 inset-x-4 z-20 pointer-events-none">
+            <div className="bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-brand-100 max-w-[200px] mx-auto pointer-events-auto">
+              <p className="text-[10px] font-bold text-brand-600 text-center uppercase tracking-wider">Set starting point</p>
+              <p className="text-[9px] text-neutral-500 text-center mt-0.5 mb-2">Enable GPS to see your safest route.</p>
               <button 
-                onClick={() => setFrom(QUICK_START_POINTS[0])}
-                className="w-full py-2.5 bg-brand-600 text-white rounded-lg text-xs font-bold active:scale-95 transition"
+                onClick={() => handleUseCurrentLocation()}
+                className="w-full py-1.5 bg-brand-600 text-white rounded-lg text-[10px] font-bold active:scale-95 transition"
               >
-                Use default start
+                Use My Location
               </button>
             </div>
           </div>
@@ -409,29 +403,29 @@ export function MapPage() {
       {/* Route Options Drawer (Only if destination selected) */}
       {to && (
         <div className={cn(
-          "bg-white border-t border-neutral-200 flex flex-col transition-all duration-300 ease-in-out shadow-[0_-8px_30px_rgb(0,0,0,0.08)]",
-          drawerExpanded ? "h-[50vh]" : "h-auto"
+          "bg-white border-t border-neutral-100 flex flex-col transition-all duration-300 ease-in-out shadow-[0_-8px_30px_rgb(0,0,0,0.06)]",
+          drawerExpanded ? "h-[45vh]" : "h-auto"
         )}>
           <button
             onClick={() => setDrawerExpanded(v => !v)}
-            className="py-1 flex flex-col items-center text-neutral-300 hover:text-neutral-500"
+            className="py-1 flex flex-col items-center text-neutral-200 hover:text-neutral-400"
             aria-label={drawerExpanded ? 'Collapse route options' : 'Expand route options'}
           >
-            <span className="w-8 h-1 bg-neutral-100 rounded-full" aria-hidden="true" />
+            <span className="w-6 h-0.5 bg-neutral-100 rounded-full" aria-hidden="true" />
           </button>
 
           {drawerExpanded ? (
-            <div className="flex-1 overflow-y-auto px-4 pb-6">
-              <div className="flex items-center justify-between mb-3">
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              <div className="flex items-center justify-between mb-2">
                 <RouteOptionsHeader provider={routingProvider} />
                 <button 
                   onClick={() => setShowLegend(v => !v)}
                   className={cn(
-                    "p-1.5 rounded-lg border transition-colors",
+                    "p-1 rounded-lg border transition-colors",
                     showLegend ? "bg-brand-50 text-brand-600 border-brand-200" : "bg-neutral-50 text-neutral-400 border-neutral-100"
                   )}
                 >
-                  <BookOpen size={16} />
+                  <BookOpen size={14} />
                 </button>
               </div>
               <RouteList
@@ -449,11 +443,11 @@ export function MapPage() {
               />
             </div>
           ) : (
-            <div className="px-4 py-2 flex items-center justify-between">
+            <div className="px-3 py-1.5 flex items-center justify-between">
               {selectedRoute ? (
-                <div className="flex items-center gap-3 flex-1">
+                <div className="flex items-center gap-2 flex-1">
                   <div 
-                    className="w-9 h-9 rounded-lg grid place-items-center font-bold text-xs shadow-sm"
+                    className="w-8 h-8 rounded-lg grid place-items-center font-bold text-[11px] shadow-sm"
                     style={{ 
                       backgroundColor: getRouteColor(selectedRoute.score),
                       color: selectedRoute.score >= 70 ? '#2e1065' : '#ffffff' 
@@ -462,35 +456,30 @@ export function MapPage() {
                     {selectedRoute.score}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-[12px] text-neutral-900 truncate">
-                      {selectedRoute.label.replace(' walking route', '')}
+                    <div className="font-bold text-[11px] text-neutral-900 truncate">
+                      {selectedRoute.label}
                     </div>
-                    <div className="text-[10px] text-neutral-500 font-medium">
+                    <div className="text-[9px] text-neutral-500 font-medium">
                       {selectedRoute.minutes} min · {selectedRoute.km} km
                     </div>
                   </div>
                   <button
                     onClick={() => setDrawerExpanded(true)}
-                    className="px-2.5 py-1.5 bg-brand-50 text-brand-700 rounded-lg text-[10px] font-bold uppercase tracking-tight border border-brand-100 active:scale-95 transition"
+                    className="px-2 py-1 bg-brand-50 text-brand-700 rounded-lg text-[9px] font-bold uppercase tracking-tight border border-brand-100 active:scale-95 transition"
                   >
-                    Options
+                    Details
                   </button>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Route Options</span>
-                  {routes && routes.length > 0 && (
-                    <span className="text-[10px] bg-brand-50 text-brand-700 px-2 py-0.5 rounded-full font-bold">
-                      {routes.length} found
-                    </span>
-                  )}
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400">Routes</span>
                 </div>
               )}
               <button 
                 onClick={() => setDrawerExpanded(true)}
-                className="p-1 text-neutral-400 ml-2"
+                className="p-1 text-neutral-300 ml-1"
               >
-                <ChevronUp size={16} />
+                <ChevronUp size={14} />
               </button>
             </div>
           )}

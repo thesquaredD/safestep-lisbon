@@ -10,7 +10,7 @@ const CONTACT_KEY = 'safestep:emergency_contact'
  * The main area has NO max-width on Map, so the map can go corner-to-corner. Other
  * pages may opt-in to a centered container themselves.
  */
-export function DesktopShell({ onFeedback }: { onFeedback: () => void }) {
+export function DesktopShell() {
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false)
   const [contact, setContact] = useState<{ name: string; phone: string } | null>(null)
 
@@ -24,7 +24,7 @@ export function DesktopShell({ onFeedback }: { onFeedback: () => void }) {
 
   return (
     <div className="h-svh flex bg-surface-2 text-[15px]">
-      <Sidebar onSOS={() => setIsEmergencyOpen(true)} onFeedback={onFeedback} />
+      <Sidebar onSOS={() => setIsEmergencyOpen(true)} />
       <main className="flex-1 relative overflow-y-auto">
         <Outlet />
       </main>
@@ -116,7 +116,7 @@ const navItems = [
   { to: '/profile',   label: 'Profile',   icon: User },
 ]
 
-function Sidebar({ onSOS, onFeedback }: { onSOS: () => void; onFeedback: () => void }) {
+function Sidebar({ onSOS }: { onSOS: () => void }) {
   return (
     <aside
       className={cn(
@@ -185,13 +185,15 @@ function Sidebar({ onSOS, onFeedback }: { onSOS: () => void; onFeedback: () => v
           </li>
 
           <li className="mt-2 px-2">
-            <button
-              onClick={onFeedback}
-              className="w-10 h-10 mx-auto rounded-xl bg-white/[0.04] text-white/50 grid place-items-center hover:bg-white/[0.08] hover:text-white transition-all"
+            <a
+              href="https://form.typeform.com/to/qFoI8tcr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 mx-auto rounded-xl bg-white/[0.04] text-white/50 grid place-items-center hover:bg-white/[0.08] hover:text-white transition-all shadow-sm active:scale-95"
               title="Give Feedback"
             >
               <MessageSquareShare size={18} />
-            </button>
+            </a>
           </li>
         </ul>
       </nav>

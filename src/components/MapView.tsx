@@ -244,9 +244,9 @@ export function MapView({
             <div className="flex flex-col items-center group cursor-pointer">
               <div className={cn(
                 "bg-white p-1.5 rounded-full shadow-lg border-2 border-brand-500 group-hover:scale-110 transition-transform",
-                !isDesktop && "p-1 border-[1.5px]"
+                !isDesktop && "p-0.5 border-[1px]"
               )}>
-                <Navigation size={isDesktop ? 14 : 12} className="text-brand-500 fill-brand-500" />
+                <Navigation size={isDesktop ? 14 : 10} className="text-brand-500 fill-brand-500" />
               </div>
               {isDesktop && from.label === 'Your Current Location' && (
                 <div className="mt-1 px-2 py-0.5 bg-brand-600 text-white text-[10px] font-bold rounded shadow-sm whitespace-nowrap uppercase tracking-wider">
@@ -266,9 +266,9 @@ export function MapView({
             <div className="flex flex-col items-center group cursor-pointer">
               <div className={cn(
                 "bg-brand-600 p-1.5 rounded-full shadow-lg border-2 border-white group-hover:scale-110 transition-transform",
-                !isDesktop && "p-1 border-[1.5px]"
+                !isDesktop && "p-0.5 border-[1px]"
               )}>
-                <MapPinIcon size={isDesktop ? 16 : 14} className="text-white fill-white" />
+                <MapPinIcon size={isDesktop ? 16 : 11} className="text-white fill-white" />
               </div>
               <div className="mt-1 px-2 py-0.5 bg-white text-neutral-900 text-[10px] font-bold rounded shadow-sm border border-neutral-100 whitespace-nowrap uppercase tracking-wider">
                 {to.label ?? 'Destination'}
@@ -284,7 +284,7 @@ export function MapView({
               <div className="absolute inset-0 bg-brand-500 rounded-full animate-ping opacity-40" />
               <div className={cn(
                 "relative w-4 h-4 bg-brand-600 rounded-full border-2 border-white shadow-md",
-                !isDesktop && "w-3 h-3 border-[1.5px]"
+                !isDesktop && "w-2.5 h-2.5 border-[1px]"
               )} />
             </div>
           </Marker>
@@ -304,10 +304,10 @@ export function MapView({
                 aria-label={s.name ?? 'Sanctuary'}
                 className={cn(
                   "cursor-pointer block rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-300",
-                  isDesktop ? "w-9 h-9" : "w-5 h-5 rounded-md ring-1"
+                  isDesktop ? "w-9 h-9" : "w-4 h-4 rounded-md ring-1"
                 )}
               >
-                <Icon size={isDesktop ? 18 : 11} />
+                <Icon size={isDesktop ? 18 : 9} />
               </button>
             </Marker>
           )
@@ -331,11 +331,11 @@ export function MapView({
                 className={cn(
                   'cursor-pointer block rounded-full grid place-items-center text-white shadow-md ring-2 ring-white hover:scale-110 active:scale-95 transition focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300',
                   tone,
-                  isDesktop ? "w-7 h-7" : "w-4 h-4 ring-1",
+                  isDesktop ? "w-7 h-7" : "w-3 h-3 ring-1",
                   isPending && 'animate-pulse ring-amber-400 ring-offset-2'
                 )}
               >
-                <Icon size={isDesktop ? 13 : 8} />
+                <Icon size={isDesktop ? 13 : 7} />
               </button>
             </Marker>
           )

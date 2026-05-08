@@ -220,33 +220,41 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
         const fastestKey = getGeoKey(fastestRoute.geometry)
         const safestKey = getGeoKey(safestRoute.geometry)
 
-        if (fastestKey === safestKey) {
-          // If fastest and safest are the same geometry (or only 1 route total)
-          const isOnlyOne = routes.length === 1
-          const label = isOnlyOne 
-            ? "Only one walking route found" 
-            : "Fastest route — also the safest option"
-          const summaryText = isOnlyOne
-            ? "It is currently the fastest and safest available option."
-            : "For this trip, the quickest route also has the highest safety score."
+        const isOnlyOne = scoredRoutes.length === 1
 
+        if (isOnlyOne) {
+          // Only one route available - label it according to its status
+          const isFastAndSafe = true // With only one, it's both by definition
           finalRoutes.push({
             ...fastestRoute,
             id: 'faster',
-            label,
+            label: isFastAndSafe ? "Fastest and safest route" : "Only available route",
             tone: 'safe',
             provider,
-            summary: `${fastestRoute.level} — ${summaryText}`
+            summary: `${fastestRoute.level} — Only available walking route found.`
           } as Route)
+        } else if (fastestKey === safestKey) {
+          // Multiple routes available, but the fastest is also the safest
+          finalRoutes.push({
+            ...fastestRoute,
+            id: 'faster',
+            label: "Fastest and safest route",
+            tone: 'safe',
+            provider,
+            summary: `${fastestRoute.level} — This route is both the quickest and safest option.`
+          } as Route)
+          
+          // Optionally show the next best if there was an alternative? 
+          // The prompt says: "If the fastest route is also the safest route, do not duplicate it as two fake routes. Instead show one route clearly"
         } else {
-          // Different geometries - Show Fastest first, then Safer
+          // Two different routes
           finalRoutes.push({
             ...fastestRoute,
             id: 'faster',
             label: 'Fastest route',
             tone: 'risk',
             provider,
-            summary: `${fastestRoute.level} — Quickest path to destination.`
+            summary: `${fastestRoute.level} — Shortest duration.`
           } as Route)
 
           finalRoutes.push({
@@ -255,7 +263,7 @@ export function useRoutes(from: LngLat | null, to: LngLat | null): State {
             label: 'Safer route',
             tone: 'safe',
             provider,
-            summary: `${safestRoute.level} — Optimized for safety and support points.`
+            summary: `${safestRoute.level} — Highest safety score.`
           } as Route)
         }
 
