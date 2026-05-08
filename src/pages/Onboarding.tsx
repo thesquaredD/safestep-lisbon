@@ -25,6 +25,7 @@ export function OnboardingPage() {
   return (
     <div className="phone-frame flex flex-col h-svh bg-white px-8 pt-16 pb-10">
       <div className="flex-1 flex flex-col items-center justify-center text-center">
+        <img src="/safestep-logo.png" alt="SafeStep" className="w-12 h-12 object-contain mb-2" />
         <span className="text-brand-600 font-bold tracking-tight text-xl mb-12">SAFESTEP</span>
         <div className="w-20 h-20 rounded-2xl bg-brand-100 grid place-items-center mb-8">
           <Icon size={36} className="text-brand-600" />

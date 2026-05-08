@@ -23,8 +23,22 @@ export function DesktopShell() {
   }, [isEmergencyOpen])
 
   return (
-    <div className="h-svh flex bg-surface-2 text-[15px]">
+    <div className="h-svh flex bg-surface-2 text-[15px] relative">
       <Sidebar onSOS={() => setIsEmergencyOpen(true)} />
+      
+      {/* Global Desktop Feedback Button */}
+      <div className="fixed top-4 right-4 z-[110]">
+        <a 
+          href="https://form.typeform.com/to/qFoI8tcr"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-full hover:bg-brand-700 transition-colors shadow-lg active:scale-95 font-bold"
+        >
+          <MessageSquareShare size={18} />
+          <span>Give feedback</span>
+        </a>
+      </div>
+
       <main className="flex-1 relative overflow-y-auto">
         <Outlet />
       </main>
@@ -183,18 +197,6 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
               <Siren size={18} className="animate-pulse" />
             </button>
           </li>
-
-          <li className="mt-2 px-2">
-            <a
-              href="https://form.typeform.com/to/qFoI8tcr"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-10 h-10 mx-auto rounded-xl bg-white/[0.04] text-white/50 grid place-items-center hover:bg-white/[0.08] hover:text-white transition-all shadow-sm active:scale-95"
-              title="Give Feedback"
-            >
-              <MessageSquareShare size={18} />
-            </a>
-          </li>
         </ul>
       </nav>
 
@@ -216,17 +218,7 @@ function Sidebar({ onSOS }: { onSOS: () => void }) {
 function Wordmark() {
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <svg viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true">
-        <rect x="1.5" y="1.5" width="29" height="29" rx="8" stroke="#b893ff" strokeWidth="1.5" />
-        <path
-          d="M22 9c-3.5 0-3.5 4-7 4s-3.5 4-7 4"
-          stroke="#d6c0ff"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <circle cx="22" cy="9" r="1.5" fill="#d6c0ff" />
-        <circle cx="8"  cy="17" r="1.5" fill="#d6c0ff" />
-      </svg>
+      <img src="/safestep-logo.png" alt="SafeStep" className="w-10 h-10 object-contain" />
       <span
         className="font-display tracking-[0.18em] text-[10px] text-white/70"
         style={{ fontVariationSettings: '"opsz" 144' }}

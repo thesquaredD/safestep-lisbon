@@ -182,14 +182,6 @@ function ActionButton({
 
 function LogoLarge() {
   return (
-    <svg viewBox="0 0 32 32" width="48" height="48" fill="none" stroke="currentColor" className="text-brand-500">
-      <path
-        d="M22 9c-3.5 0-3.5 4-7 4s-3.5 4-7 4"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <circle cx="22" cy="9" r="2" fill="currentColor" />
-      <circle cx="8" cy="17" r="2" fill="currentColor" />
-    </svg>
+    <img src="/safestep-logo.png" alt="SafeStep" className="w-12 h-12 object-contain" />
   )
 }
