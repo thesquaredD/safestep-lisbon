@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useSearchParams, useNavigate } from 'react-router'
 import {
   Footprints, Shield, Radio, AlertTriangle,
   ChevronDown, ChevronUp, Coffee, Cross, Beer, Store, Lightbulb,
@@ -27,6 +27,7 @@ const QUICK_START_POINTS: (LngLat & { id: string })[] = [
 const ACTIVE_START_KEY = 'safestep:active_start'
 
 export function MapPage() {
+  const navigate = useNavigate()
   const { coords, status: locationStatus, requestLocation } = useLocation()
   const [searchParams] = useSearchParams()
   const urlLat = searchParams.get('lat')
@@ -121,13 +122,27 @@ export function MapPage() {
     hasBothPoints ? to : null
   )
 
-  const [selectedId, setSelectedId] = useState<RouteId>('safer')
+  const [selectedId] = useState<RouteId>('safer')
   const [showLegend, setShowLegend] = useState(false)
 
   // If the chosen route disappears (e.g. fewer alternatives returned) fall back.
   const routeById = (id: RouteId) => routes?.find(r => r.id === id)
   const selectedRoute = routeById(selectedId) ?? routes?.[0]
   const selectedIdSafe = selectedRoute?.id ?? 'safer'
+
+  const handleStartRoute = (id: RouteId) => {
+    if (!from || !to) return
+    const params = new URLSearchParams({
+      lat: from.lat.toString(),
+      lng: from.lng.toString(),
+      fromLabel: from.label ?? 'Current Location',
+      toLat: to.lat.toString(),
+      toLng: to.lng.toString(),
+      toLabel: to.label ?? 'Destination',
+      routeId: id
+    })
+    navigate(`/walk?${params.toString()}`)
+  }
 
   /* ───────────────────────── DESKTOP ───────────────────────── */
   if (isDesktop) {
@@ -246,7 +261,7 @@ export function MapPage() {
             loading={routesLoading}
             error={routesError}
             selectedId={selectedIdSafe}
-            onSelect={setSelectedId}
+            onSelect={handleStartRoute}
             toSet={!!to}
             provider={routingProvider}
             onSearchClick={() => setSearchTrigger(v => v + 1)}
@@ -433,10 +448,7 @@ export function MapPage() {
                 loading={routesLoading}
                 error={routesError}
                 selectedId={selectedIdSafe}
-                onSelect={(id) => {
-                  setSelectedId(id)
-                  setDrawerExpanded(false)
-                }}
+                onSelect={handleStartRoute}
                 toSet={!!to}
                 provider={routingProvider}
                 onSearchClick={() => setSearchTrigger(v => v + 1)}
@@ -464,10 +476,10 @@ export function MapPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setDrawerExpanded(true)}
-                    className="px-2 py-1 bg-brand-50 text-brand-700 rounded-lg text-[9px] font-bold uppercase tracking-tight border border-brand-100 active:scale-95 transition"
+                    onClick={() => handleStartRoute(selectedIdSafe)}
+                    className="px-2 py-1 bg-brand-600 text-white rounded-lg text-[9px] font-bold uppercase tracking-tight shadow-sm active:scale-95 transition"
                   >
-                    Details
+                    Start
                   </button>
                 </div>
               ) : (
